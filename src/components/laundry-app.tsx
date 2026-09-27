@@ -344,44 +344,81 @@ function AppFrame({ children, immersive = false }: { children: ReactNode; immers
 }
 
 function HomeScreen({ go, latestOrder }: { go: (screen: Screen) => void; latestOrder: Booking }) {
-  const actions = [
-    { label: "Book Laundry", sub: "Quick & easy", icon: WashingMachine, screen: "booking" as Screen },
-    { label: "Track Order", sub: "Live progress", icon: Truck, screen: "tracking" as Screen },
-    { label: "Our Services", sub: "See pricing", icon: Shirt, screen: "services" as Screen },
-    { label: "Contact Us", sub: "Call support", icon: Phone, screen: "profile" as Screen },
+  const [category, setCategory] = useState("Wash & Fold");
+  const categories = [
+    { label: "Wash & Fold", note: "GH₵13/kg", icon: WashingMachine },
+    { label: "Ironing", note: "Crisp", icon: Sparkles },
+    { label: "Express", note: "12 hrs", icon: Clock3 },
+    { label: "Drying", note: "Fabric-safe", icon: Wind },
+    { label: "Folding", note: "Neat", icon: FoldHorizontal },
+  ];
+  const tiles = [
+    { label: "Book", icon: WashingMachine, screen: "booking" as Screen },
+    { label: "Track", icon: Truck, screen: "tracking" as Screen },
+    { label: "Pricing", icon: Shirt, screen: "services" as Screen },
+    { label: "Orders", icon: PackageCheck, screen: "orders" as Screen },
+    { label: "Payment", icon: CircleDollarSign, screen: "payments" as Screen },
+    { label: "Support", icon: Phone, screen: "profile" as Screen },
   ];
   return (
-    <>
-      <div className="app-scroll px-5 pb-6 pt-6">
-        <header className="flex items-center justify-between">
-          <div><p className="text-xs font-medium text-muted-foreground">Good evening,</p><h1 className="font-display text-xl font-extrabold text-foreground">Bernard</h1></div>
-          <Button variant="outline" size="icon" className="rounded-full" onClick={() => go("notifications")} aria-label="Notifications"><Bell /></Button>
-        </header>
-        <section className="promo-banner mt-5">
-          <div className="relative z-10 max-w-[62%]">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">24-hour care</p>
-            <h2 className="mt-2 font-display text-2xl font-extrabold leading-tight text-primary-foreground">Laundry from GH₵13/kg</h2>
-            <Button className="mt-5 bg-card text-primary hover:bg-card/90" onClick={() => go("booking")}>Book Laundry</Button>
-          </div>
-          <WashingMachine className="absolute -bottom-3 -right-2 size-32 text-primary-foreground/20" strokeWidth={1.2} />
-        </section>
-        <div className="mt-6 flex items-center justify-between"><h2 className="section-title">Quick actions</h2><span className="text-xs text-muted-foreground">Everything in one place</span></div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          {actions.map((action) => {
-            const Icon = action.icon;
-            return <Button key={action.label} variant="outline" className="quick-action" onClick={() => go(action.screen)}><IconTile><Icon /></IconTile><span><strong>{action.label}</strong><small>{action.sub}</small></span></Button>;
-          })}
+    <div className="app-scroll has-dock px-5 pt-7">
+      <header className="flex items-start justify-between">
+        <div>
+          <p className="hero-greeting">Good morning,</p>
+          <h1 className="hero-title">Bernard</h1>
+          <span className="hero-place"><MapPin />KNUST Campus · Republic Hall</span>
         </div>
-        <div className="mt-6 flex items-center justify-between"><h2 className="section-title">Active order</h2><Button variant="link" className="px-0" onClick={() => go("orders")}>View all</Button></div>
-        <Button variant="outline" className="order-card mt-2" onClick={() => go("tracking")}>
-          <div className="flex w-full items-start justify-between"><div className="text-left"><span className="status-badge">{latestOrder.status}</span><h3 className="mt-3 font-display font-bold text-foreground">Order #{latestOrder.id}</h3><p className="mt-1 text-xs text-muted-foreground">{latestOrder.weight} kg · GH₵{latestOrder.weight * PRICE_PER_KG}.00</p></div><ChevronRight className="text-muted-foreground" /></div>
-          <div className="progress-track"><span /></div>
-          <div className="flex w-full justify-between text-[10px] font-medium text-muted-foreground"><span>Picked up</span><span>Ready in 24 hours</span></div>
-        </Button>
+        <Button variant="outline" size="icon" className="mt-1 rounded-full" onClick={() => go("notifications")} aria-label="Notifications"><Bell /></Button>
+      </header>
+
+      <h2 className="section-title mt-7">Active order</h2>
+      <Button variant="outline" className="active-order mt-2" onClick={() => go("tracking")}>
+        <div className="active-order-top">
+          <div>
+            <span className="status-badge">{latestOrder.status}</span>
+            <h3 className="mt-2">Order #{latestOrder.id}</h3>
+            <small>{latestOrder.weight} kg · GH₵{latestOrder.weight * PRICE_PER_KG}.00 · {latestOrder.payment}</small>
+          </div>
+          <span className="pill-cta">Track live<ChevronRight /></span>
+        </div>
+        <div className="progress-track"><span /></div>
+        <div className="flex w-full justify-between text-[10px] font-medium text-muted-foreground"><span>Picked up</span><span>Ready in 24 hours</span></div>
+      </Button>
+
+      <h2 className="section-title mt-7">Choose a service</h2>
+      <div className="chip-rail mt-3">
+        {categories.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Button key={item.label} variant="ghost" className={category === item.label ? "chip chip-active" : "chip"} onClick={() => { setCategory(item.label); toast(`${item.label} selected · ${item.note}`); }}>
+              <span className="chip-ring"><Icon /></span>
+              <small>{item.label}</small>
+              <em>{item.note}</em>
+            </Button>
+          );
+        })}
       </div>
-    </>
+
+      <section className="promo-banner mt-7">
+        <div className="relative z-10 max-w-[62%]">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">24-hour care</p>
+          <h2 className="mt-2 font-display text-2xl font-extrabold leading-tight text-primary-foreground">Laundry from GH₵13/kg</h2>
+          <Button className="mt-5 bg-card text-primary hover:bg-card/90" onClick={() => go("booking")}>Book Laundry</Button>
+        </div>
+        <WashingMachine className="absolute -bottom-3 -right-2 size-32 text-primary-foreground/20" strokeWidth={1.2} />
+      </section>
+
+      <h2 className="section-title mt-7">Quick actions</h2>
+      <div className="tile-grid mt-3">
+        {tiles.map((tile) => {
+          const Icon = tile.icon;
+          return <Button key={tile.label} variant="ghost" className="tile" onClick={() => go(tile.screen)}><Icon /><span>{tile.label}</span></Button>;
+        })}
+      </div>
+    </div>
   );
 }
+
 
 function ServicesScreen({ go, weight, setWeight }: { go: (screen: Screen) => void; weight: number; setWeight: (value: number) => void }) {
   const services = [
