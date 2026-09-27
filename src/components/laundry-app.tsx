@@ -110,15 +110,15 @@ function AppHeader({ title, onBack, action }: { title: string; onBack?: () => vo
   );
 }
 
-function BottomNav({ active, go }: { active: Screen; go: (screen: Screen) => void }) {
+function BottomNav({ active, go, alerts = 0, activeOrders = 0 }: { active: Screen; go: (screen: Screen) => void; alerts?: number; activeOrders?: number }) {
   const items = [
-    { screen: "home" as Screen, label: "Home", icon: Home },
-    { screen: "orders" as Screen, label: "Orders", icon: PackageCheck },
-    { screen: "notifications" as Screen, label: "Notifications", icon: Bell },
-    { screen: "profile" as Screen, label: "Profile", icon: UserRound },
+    { screen: "home" as Screen, label: "Home", icon: Home, badge: 0 },
+    { screen: "orders" as Screen, label: "Orders", icon: PackageCheck, badge: activeOrders },
+    { screen: "notifications" as Screen, label: "Alerts", icon: Bell, badge: alerts },
+    { screen: "profile" as Screen, label: "Profile", icon: UserRound, badge: 0 },
   ];
   return (
-    <nav className="bottom-nav" aria-label="Main navigation">
+    <nav className="dock" aria-label="Main navigation">
       {items.map((item) => {
         const Icon = item.icon;
         const selected = active === item.screen || (active === "tracking" && item.screen === "orders");
@@ -126,12 +126,13 @@ function BottomNav({ active, go }: { active: Screen; go: (screen: Screen) => voi
           <Button
             key={item.screen}
             variant="ghost"
-            className={selected ? "bottom-nav-item bottom-nav-item-active" : "bottom-nav-item"}
+            className={selected ? "dock-item dock-item-active" : "dock-item"}
             onClick={() => go(item.screen)}
             aria-label={item.label}
           >
             <Icon />
             <span>{item.label}</span>
+            {item.badge > 0 && !selected ? <i className="dock-badge">{item.badge}</i> : null}
           </Button>
         );
       })}
@@ -325,7 +326,7 @@ export function LaundryApp() {
     <AppFrame>
       <div className="flex h-full flex-col bg-background">
         {content}
-        {screen !== "admin" && !["services", "booking", "payments"].includes(screen) ? <BottomNav active={screen} go={go} /> : null}
+        {screen !== "admin" && !["services", "booking", "payments"].includes(screen) ? <BottomNav active={screen} go={go} alerts={notificationsRead ? 0 : 2} activeOrders={orders.filter((order) => order.status !== "Delivered").length} /> : null}
       </div>
     </AppFrame>
   );
@@ -343,44 +344,81 @@ function AppFrame({ children, immersive = false }: { children: ReactNode; immers
 }
 
 function HomeScreen({ go, latestOrder }: { go: (screen: Screen) => void; latestOrder: Booking }) {
-  const actions = [
-    { label: "Book Laundry", sub: "Quick & easy", icon: WashingMachine, screen: "booking" as Screen },
-    { label: "Track Order", sub: "Live progress", icon: Truck, screen: "tracking" as Screen },
-    { label: "Our Services", sub: "See pricing", icon: Shirt, screen: "services" as Screen },
-    { label: "Contact Us", sub: "Call support", icon: Phone, screen: "profile" as Screen },
+  const [category, setCategory] = useState("Wash & Fold");
+  const categories = [
+    { label: "Wash & Fold", note: "GH₵13/kg", icon: WashingMachine },
+    { label: "Ironing", note: "Crisp", icon: Sparkles },
+    { label: "Express", note: "12 hrs", icon: Clock3 },
+    { label: "Drying", note: "Fabric-safe", icon: Wind },
+    { label: "Folding", note: "Neat", icon: FoldHorizontal },
+  ];
+  const tiles = [
+    { label: "Book", icon: WashingMachine, screen: "booking" as Screen },
+    { label: "Track", icon: Truck, screen: "tracking" as Screen },
+    { label: "Pricing", icon: Shirt, screen: "services" as Screen },
+    { label: "Orders", icon: PackageCheck, screen: "orders" as Screen },
+    { label: "Payment", icon: CircleDollarSign, screen: "payments" as Screen },
+    { label: "Support", icon: Phone, screen: "profile" as Screen },
   ];
   return (
-    <>
-      <div className="app-scroll px-5 pb-6 pt-6">
-        <header className="flex items-center justify-between">
-          <div><p className="text-xs font-medium text-muted-foreground">Good evening,</p><h1 className="font-display text-xl font-extrabold text-foreground">Bernard</h1></div>
-          <Button variant="outline" size="icon" className="rounded-full" onClick={() => go("notifications")} aria-label="Notifications"><Bell /></Button>
-        </header>
-        <section className="promo-banner mt-5">
-          <div className="relative z-10 max-w-[62%]">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">24-hour care</p>
-            <h2 className="mt-2 font-display text-2xl font-extrabold leading-tight text-primary-foreground">Laundry from GH₵13/kg</h2>
-            <Button className="mt-5 bg-card text-primary hover:bg-card/90" onClick={() => go("booking")}>Book Laundry</Button>
-          </div>
-          <WashingMachine className="absolute -bottom-3 -right-2 size-32 text-primary-foreground/20" strokeWidth={1.2} />
-        </section>
-        <div className="mt-6 flex items-center justify-between"><h2 className="section-title">Quick actions</h2><span className="text-xs text-muted-foreground">Everything in one place</span></div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          {actions.map((action) => {
-            const Icon = action.icon;
-            return <Button key={action.label} variant="outline" className="quick-action" onClick={() => go(action.screen)}><IconTile><Icon /></IconTile><span><strong>{action.label}</strong><small>{action.sub}</small></span></Button>;
-          })}
+    <div className="app-scroll has-dock px-5 pt-7">
+      <header className="flex items-start justify-between">
+        <div>
+          <p className="hero-greeting">Good morning,</p>
+          <h1 className="hero-title">Bernard</h1>
+          <span className="hero-place"><MapPin />KNUST Campus · Republic Hall</span>
         </div>
-        <div className="mt-6 flex items-center justify-between"><h2 className="section-title">Active order</h2><Button variant="link" className="px-0" onClick={() => go("orders")}>View all</Button></div>
-        <Button variant="outline" className="order-card mt-2" onClick={() => go("tracking")}>
-          <div className="flex w-full items-start justify-between"><div className="text-left"><span className="status-badge">{latestOrder.status}</span><h3 className="mt-3 font-display font-bold text-foreground">Order #{latestOrder.id}</h3><p className="mt-1 text-xs text-muted-foreground">{latestOrder.weight} kg · GH₵{latestOrder.weight * PRICE_PER_KG}.00</p></div><ChevronRight className="text-muted-foreground" /></div>
-          <div className="progress-track"><span /></div>
-          <div className="flex w-full justify-between text-[10px] font-medium text-muted-foreground"><span>Picked up</span><span>Ready in 24 hours</span></div>
-        </Button>
+        <Button variant="outline" size="icon" className="mt-1 rounded-full" onClick={() => go("notifications")} aria-label="Notifications"><Bell /></Button>
+      </header>
+
+      <h2 className="section-title mt-7">Active order</h2>
+      <Button variant="outline" className="active-order mt-2" onClick={() => go("tracking")}>
+        <div className="active-order-top">
+          <div>
+            <span className="status-badge">{latestOrder.status}</span>
+            <h3 className="mt-2">Order #{latestOrder.id}</h3>
+            <small>{latestOrder.weight} kg · GH₵{latestOrder.weight * PRICE_PER_KG}.00 · {latestOrder.payment}</small>
+          </div>
+          <span className="pill-cta">Track live<ChevronRight /></span>
+        </div>
+        <div className="progress-track"><span /></div>
+        <div className="flex w-full justify-between text-[10px] font-medium text-muted-foreground"><span>Picked up</span><span>Ready in 24 hours</span></div>
+      </Button>
+
+      <h2 className="section-title mt-7">Choose a service</h2>
+      <div className="chip-rail mt-3">
+        {categories.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Button key={item.label} variant="ghost" className={category === item.label ? "chip chip-active" : "chip"} onClick={() => { setCategory(item.label); toast(`${item.label} selected · ${item.note}`); }}>
+              <span className="chip-ring"><Icon /></span>
+              <small>{item.label}</small>
+              <em>{item.note}</em>
+            </Button>
+          );
+        })}
       </div>
-    </>
+
+      <section className="promo-banner mt-7">
+        <div className="relative z-10 max-w-[62%]">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">24-hour care</p>
+          <h2 className="mt-2 font-display text-2xl font-extrabold leading-tight text-primary-foreground">Laundry from GH₵13/kg</h2>
+          <Button className="mt-5 bg-card text-primary hover:bg-card/90" onClick={() => go("booking")}>Book Laundry</Button>
+        </div>
+        <WashingMachine className="absolute -bottom-3 -right-2 size-32 text-primary-foreground/20" strokeWidth={1.2} />
+      </section>
+
+      <h2 className="section-title mt-7">Quick actions</h2>
+      <div className="tile-grid mt-3">
+        {tiles.map((tile) => {
+          const Icon = tile.icon;
+          return <Button key={tile.label} variant="ghost" className="tile" onClick={() => go(tile.screen)}><Icon /><span>{tile.label}</span></Button>;
+        })}
+      </div>
+    </div>
   );
 }
+
 
 function ServicesScreen({ go, weight, setWeight }: { go: (screen: Screen) => void; weight: number; setWeight: (value: number) => void }) {
   const services = [
@@ -421,7 +459,7 @@ function BookingScreen(props: BookingProps) {
     <><AppHeader title={step === 4 ? "Booking confirmed" : `Book laundry · ${step} of 3`} onBack={step > 1 && step < 4 ? () => setStep(step - 1) : back} />
       <main className="app-scroll p-5">
         {step < 4 ? <div className="booking-progress"><span style={{ width: `${step * 33.333}%` }} /></div> : null}
-        {step === 1 ? <div className="booking-panel"><p className="eyebrow">Pickup details</p><h2>When should we collect?</h2><label className="field-label mt-6">Pickup location<select className="app-input" value={location} onChange={(event) => setLocation(event.target.value)}><option value="">Select your area or hostel</option><option>KNUST, Republic Hall</option><option>KNUST, Unity Hall</option><option>Gyinyase</option><option>Outside KNUST</option></select></label>{location === "Outside KNUST" ? <p className="info-note">Delivery fee to be confirmed based on your location.</p> : null}<label className="field-label">Preferred date<input className="app-input" type="date" value={pickupDate} onChange={(event) => setPickupDate(event.target.value)} /></label><label className="field-label">Preferred time<select className="app-input" value={pickupTime} onChange={(event) => setPickupTime(event.target.value)}><option value="">Select a time</option><option>8:00 AM – 10:00 AM</option><option>10:00 AM – 12:00 PM</option><option>2:00 PM – 4:00 PM</option><option>4:00 PM – 6:00 PM</option></select></label><Button className="mt-6 h-13 w-full" onClick={continueBooking}>Continue</Button></div> : null}
+        {step === 1 ? <div className="booking-panel"><p className="eyebrow">Pickup details</p><h2>When should we collect?</h2><label className="field-label input-wrap mt-6">Pickup location<select className="app-input pr-11" value={location} onChange={(event) => setLocation(event.target.value)}><option value="">Select your area or hostel</option><option>KNUST, Republic Hall</option><option>KNUST, Unity Hall</option><option>Gyinyase</option><option>Outside KNUST</option></select>{location ? <span className="valid-check"><Check /></span> : null}</label>{location === "Outside KNUST" ? <p className="info-note">Delivery fee to be confirmed based on your location.</p> : null}<label className="field-label input-wrap">Preferred date<input className="app-input pr-11" type="date" value={pickupDate} onChange={(event) => setPickupDate(event.target.value)} />{pickupDate ? <span className="valid-check"><Check /></span> : null}</label><label className="field-label input-wrap">Preferred time<select className="app-input pr-11" value={pickupTime} onChange={(event) => setPickupTime(event.target.value)}><option value="">Select a time</option><option>8:00 AM – 10:00 AM</option><option>10:00 AM – 12:00 PM</option><option>2:00 PM – 4:00 PM</option><option>4:00 PM – 6:00 PM</option></select>{pickupTime ? <span className="valid-check"><Check /></span> : null}</label><Button className="mt-6 h-13 w-full" onClick={continueBooking}>Continue</Button></div> : null}
         {step === 2 ? <div className="booking-panel"><p className="eyebrow">Laundry details</p><h2>Tell us about your load</h2><div className="calculator mt-6"><p className="field-label">Estimated weight</p><div className="mt-2 flex items-center justify-between"><WeightStepper value={weight} setValue={setWeight} /><strong className="font-display text-2xl text-success">GH₵{total}.00</strong></div></div><label className="field-label mt-5">Special instructions<textarea className="app-input min-h-24 resize-none" maxLength={300} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Delicate items, stains, fabric notes…" /></label><p className="info-note">Final weight and price will be confirmed at pickup.</p><Button className="mt-6 h-13 w-full" onClick={continueBooking}>Review booking</Button></div> : null}
         {step === 3 ? <div className="booking-panel"><p className="eyebrow">Review & payment</p><h2>Confirm your booking</h2><Summary order={{ ...baseOrder, location, date: pickupDate, time: pickupTime, weight, notes, payment }} /><p className="field-label mt-5">Payment method</p><PaymentChoices value={payment} setValue={setPayment} /><div className="mt-5 flex gap-3"><Button variant="outline" className="h-12 flex-1" onClick={() => setStep(1)}>Edit details</Button><Button className="h-12 flex-[1.4]" onClick={confirmBooking}>Confirm booking</Button></div></div> : null}
         {step === 4 ? <div className="confirmation"><div className="confirmation-icon"><Check /></div><p className="eyebrow mt-5">You’re all set</p><h2>Laundry booked!</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">We’ll collect your laundry at the selected time and confirm the final weight.</p><div className="mt-6 w-full"><Summary order={latestOrder} /></div><Button className="mt-6 h-13 w-full" onClick={() => go("tracking")}>Track Order</Button><Button variant="ghost" className="mt-2 w-full" onClick={() => { setStep(1); go("home"); }}>Back to Home</Button></div> : null}
@@ -440,7 +478,7 @@ function PaymentChoices({ value, setValue }: { value: string; setValue: (value: 
 
 function TrackingScreen({ order, back }: { order: Booking; back: () => void }) {
   const statuses = ["Booking Confirmed", "Picked Up", "Processing", "Ready for Delivery", "Delivered"];
-  return <><AppHeader title="Track order" onBack={back} /><main className="app-scroll p-5"><div className="flex items-start justify-between"><div><p className="eyebrow">Order #{order.id}</p><h2 className="mt-1 font-display text-xl font-extrabold text-foreground">On the way to fresh</h2></div><span className="status-badge">{order.status}</span></div><div className="eta-card mt-5"><Clock3 /><div><strong>Estimated completion</strong><p>Within 24 hours of pickup</p></div></div><div className="timeline mt-7">{statuses.map((status, index) => <div className={index < 2 ? "timeline-item timeline-done" : index === 2 ? "timeline-item timeline-current" : "timeline-item"} key={status}><span className="timeline-dot">{index < 2 ? <Check /> : null}</span><div><strong>{status}</strong><p>{index === 0 ? "27 Sep · 6:42 PM" : index === 1 ? "28 Sep · 10:14 AM" : index === 2 ? "In progress" : "Pending"}</p></div></div>)}</div><Summary order={order} /><div className="mt-5 grid grid-cols-2 gap-3"><Button variant="outline" onClick={() => toast("Order details are up to date.")}>Order details</Button><Button onClick={() => window.location.assign("tel:0532331150")}><Phone />Support</Button></div></main></>;
+  return <><AppHeader title="Track order" onBack={back} /><main className="app-scroll has-dock p-5"><div className="flex items-start justify-between"><div><p className="eyebrow">Order #{order.id}</p><h2 className="mt-1 font-display text-xl font-extrabold text-foreground">On the way to fresh</h2></div><span className="status-badge">{order.status}</span></div><div className="eta-card mt-5"><Clock3 /><div><strong>Estimated completion</strong><p>Within 24 hours of pickup</p></div></div><div className="timeline mt-7">{statuses.map((status, index) => <div className={index < 2 ? "timeline-item timeline-done" : index === 2 ? "timeline-item timeline-current" : "timeline-item"} key={status}><span className="timeline-dot">{index < 2 ? <Check /> : null}</span><div><strong>{status}</strong><p>{index === 0 ? "27 Sep · 6:42 PM" : index === 1 ? "28 Sep · 10:14 AM" : index === 2 ? "In progress" : "Pending"}</p></div></div>)}</div><Summary order={order} /><div className="mt-5 grid grid-cols-2 gap-3"><Button variant="outline" onClick={() => toast("Order details are up to date.")}>Order details</Button><Button onClick={() => window.location.assign("tel:0532331150")}><Phone />Support</Button></div></main></>;
 }
 
 function PaymentsScreen({ payment, setPayment, back }: { payment: string; setPayment: (value: string) => void; back: () => void }) {
@@ -448,7 +486,7 @@ function PaymentsScreen({ payment, setPayment, back }: { payment: string; setPay
 }
 
 function OrdersScreen({ orders, go }: { orders: Booking[]; go: (screen: Screen) => void }) {
-  return <><AppHeader title="My orders" action={<Button variant="ghost" size="icon" onClick={() => go("booking")} aria-label="New booking"><Plus /></Button>} /><main className="app-scroll p-5">{orders.length ? <div className="space-y-3">{[...orders].reverse().map((order) => <Button variant="outline" className="order-list-row" key={order.id} onClick={() => go("tracking")}><IconTile><Shirt /></IconTile><div className="min-w-0 flex-1 text-left"><div className="flex items-center justify-between"><strong>#{order.id}</strong><span className="status-badge">{order.status}</span></div><p>{order.date} · {order.weight} kg · GH₵{order.weight * PRICE_PER_KG}.00</p></div><ChevronRight /></Button>)}</div> : <div className="empty-state"><Shirt /><h2>No orders yet</h2><p>Your first fresh load is only a few taps away.</p><Button onClick={() => go("booking")}>Book Laundry</Button></div>}</main></>;
+  return <><AppHeader title="My orders" action={<Button variant="ghost" size="icon" onClick={() => go("booking")} aria-label="New booking"><Plus /></Button>} /><main className="app-scroll has-dock p-5">{orders.length ? <div className="space-y-3">{[...orders].reverse().map((order) => <Button variant="outline" className="order-list-row" key={order.id} onClick={() => go("tracking")}><IconTile><Shirt /></IconTile><div className="min-w-0 flex-1 text-left"><div className="flex items-center justify-between"><strong>#{order.id}</strong><span className="status-badge">{order.status}</span></div><p>{order.date} · {order.weight} kg · GH₵{order.weight * PRICE_PER_KG}.00</p></div><ChevronRight /></Button>)}</div> : <div className="empty-state"><Shirt /><h2>No orders yet</h2><p>Your first fresh load is only a few taps away.</p><Button onClick={() => go("booking")}>Book Laundry</Button></div>}</main></>;
 }
 
 function NotificationsScreen({ read, setRead }: { read: boolean; setRead: (value: boolean) => void }) {
@@ -458,20 +496,78 @@ function NotificationsScreen({ read, setRead }: { read: boolean; setRead: (value
     ["Payment update", "Cash on Delivery is selected for your order.", "Yesterday", CircleDollarSign],
     ["Welcome!", "Thanks for choosing Affordable Laundry Service.", "2d ago", Sparkles],
   ] as const;
-  return <><AppHeader title="Notifications" action={<Button variant="link" className="px-0 text-xs" onClick={() => setRead(true)}>Mark all read</Button>} /><main className="app-scroll p-5"><div className="space-y-3">{notices.map(([title, copy, time, Icon], index) => <div className="notification-row" key={title}><IconTile><Icon /></IconTile><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><strong>{title}</strong><span>{time}</span></div><p>{copy}</p></div>{!read && index < 2 ? <i /> : null}</div>)}</div></main></>;
+  return <><AppHeader title="Notifications" action={<Button variant="link" className="px-0 text-xs" onClick={() => setRead(true)}>Mark all read</Button>} /><main className="app-scroll has-dock p-5"><div className="space-y-3">{notices.map(([title, copy, time, Icon], index) => <div className="notification-row" key={title}><IconTile><Icon /></IconTile><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><strong>{title}</strong><span>{time}</span></div><p>{copy}</p></div>{!read && index < 2 ? <i /> : null}</div>)}</div></main></>;
 }
 
 function ProfileScreen({ go }: { go: (screen: Screen) => void }) {
-  const rows = [
-    ["My Orders", PackageCheck, () => go("orders")],
-    ["Saved Addresses", MapPin, () => toast("Republic Hall is your saved address.")],
-    ["Payment Preferences", CircleDollarSign, () => go("payments")],
-    ["Notifications", Bell, () => go("notifications")],
-    ["Help & Support", HelpCircle, () => window.location.assign("tel:0532331150")],
-    ["Settings", Settings, () => toast("Demo preferences saved on this device.")],
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const account = [
+    ["Profile details", UserRound, "Bernard Atsu", () => toast.success("Profile details saved.")],
+    ["Phone number", Phone, "+233 53 233 1150", () => toast("Demo number kept on this device.")],
+    ["Saved address", MapPin, "Republic Hall", () => toast("Republic Hall is your saved address.")],
   ] as const;
-  return <><AppHeader title="Profile" /><main className="app-scroll p-5"><div className="profile-card"><div className="avatar-lg">BA</div><div><h2>Bernard Atsu</h2><p>+233 53 233 1150</p><Button variant="link" className="h-auto px-0 py-1" onClick={() => toast.success("Profile details saved.")}>Edit profile</Button></div></div><div className="mt-6 space-y-1">{rows.map(([label, Icon, action]) => <Button variant="ghost" className="profile-row" key={label} onClick={action}><IconTile><Icon /></IconTile><span>{label}</span><ChevronRight className="ml-auto text-muted-foreground" /></Button>)}</div><div className="contact-panel mt-6"><MapPin /><p>Gyinyase, opposite KNUST Business School, Kumasi</p><Phone /><p>0532331150 / 0243140855</p></div><Button variant="outline" className="mt-5 w-full text-destructive" onClick={() => go("auth")}><LogOut />Log out of demo</Button><Button variant="ghost" className="mt-2 w-full text-xs text-muted-foreground" onClick={() => go("admin")}>Switch to staff demo</Button></main></>;
+  const preferences = [
+    ["My orders", PackageCheck, "", () => go("orders")],
+    ["Payment preferences", CircleDollarSign, "Cash", () => go("payments")],
+    ["Notifications", Bell, "On", () => go("notifications")],
+    ["Settings", Settings, "", () => toast("Demo preferences saved on this device.")],
+  ] as const;
+  const faqs = [
+    ["When is pickup free?", "Pickup and delivery are free anywhere inside KNUST campus.", Truck],
+    ["How does GH₵13/kg work?", "You pay per kilogram; final weight is confirmed at pickup.", CircleDollarSign],
+    ["How fast is it?", "Most loads are washed, ironed and back within 24 hours.", Clock3],
+  ] as const;
+  return (
+    <>
+      <AppHeader title="Profile" />
+      <main className="app-scroll has-dock p-5">
+        <div className="profile-card"><div className="avatar-lg">BA</div><div><h2>Bernard Atsu</h2><p>+233 53 233 1150</p><Button variant="link" className="h-auto px-0 py-1" onClick={() => toast.success("Profile details saved.")}>Edit profile</Button></div></div>
+
+        <p className="group-label">Account</p>
+        <div className="group-card">
+          {account.map(([label, Icon, value, action]) => <Button variant="ghost" className="group-row" key={label} onClick={action}><Icon /><span>{label}</span><em>{value}</em><ChevronRight className="size-4 text-muted-foreground" /></Button>)}
+        </div>
+
+        <p className="group-label">Preferences</p>
+        <div className="group-card">
+          {preferences.map(([label, Icon, value, action]) => <Button variant="ghost" className="group-row" key={label} onClick={action}><Icon /><span>{label}</span><em>{value}</em><ChevronRight className="size-4 text-muted-foreground" /></Button>)}
+        </div>
+
+        <h2 className="mt-8 font-display text-xl font-extrabold leading-tight text-foreground">How can we help you today?</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Frequently asked questions</p>
+        <div className="faq-rail mt-3">
+          {faqs.map(([question, answer, Icon]) => <Button variant="ghost" className="faq-card" key={question} onClick={() => toast(answer)}><Icon /><strong>{question}</strong><p>{answer}</p></Button>)}
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <Button variant="outline" className="h-12" onClick={() => window.location.assign("tel:0532331150")}><Phone />Call us</Button>
+          <Button variant="outline" className="h-12" onClick={() => toast("Help centre demo opened.")}><HelpCircle />Help centre</Button>
+        </div>
+
+        <div className="contact-panel mt-6"><MapPin /><p>Gyinyase, opposite KNUST Business School, Kumasi</p><Phone /><p>0532331150 / 0243140855</p></div>
+
+        <p className="group-label">Session</p>
+        <div className="group-card">
+          <Button variant="ghost" className="group-row" onClick={() => go("admin")}><UsersRound /><span>Switch to staff demo</span><ChevronRight className="ml-auto size-4 text-muted-foreground" /></Button>
+          <Button variant="ghost" className="group-row group-row-danger" onClick={() => setConfirmLogout(true)}><LogOut /><span>Log out of demo</span></Button>
+        </div>
+      </main>
+      {confirmLogout ? (
+        <div className="sheet-overlay" onClick={() => setConfirmLogout(false)}>
+          <div className="sheet" onClick={(event) => event.stopPropagation()}>
+            <div className="sheet-handle" />
+            <div className="sheet-icon"><LogOut /></div>
+            <h2>Log out of the demo?</h2>
+            <p>You will return to the sign-in screen. Your saved demo bookings stay on this device.</p>
+            <Button className="mt-5 h-13 w-full bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { setConfirmLogout(false); go("auth"); }}>Log out</Button>
+            <Button variant="ghost" className="mt-2 h-12 w-full" onClick={() => setConfirmLogout(false)}>Stay signed in</Button>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
 }
+
 
 function AdminScreen({ go, orders, setOrders, filter, setFilter, query, setQuery }: { go: (screen: Screen) => void; orders: Booking[]; setOrders: (orders: Booking[]) => void; filter: string; setFilter: (value: string) => void; query: string; setQuery: (value: string) => void }) {
   const allOrders = useMemo(() => orders.length > 1 ? orders : [baseOrder, { ...baseOrder, id: "AL0002", status: "Processing", location: "KNUST, Unity Hall", weight: 5 }, { ...baseOrder, id: "AL0003", status: "Delivered", location: "Gyinyase", weight: 2 }], [orders]);
