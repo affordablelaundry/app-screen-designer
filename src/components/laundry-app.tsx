@@ -486,7 +486,7 @@ function PaymentsScreen({ payment, setPayment, back }: { payment: string; setPay
 }
 
 function OrdersScreen({ orders, go }: { orders: Booking[]; go: (screen: Screen) => void }) {
-  return <><AppHeader title="My orders" action={<Button variant="ghost" size="icon" onClick={() => go("booking")} aria-label="New booking"><Plus /></Button>} /><main className="app-scroll p-5">{orders.length ? <div className="space-y-3">{[...orders].reverse().map((order) => <Button variant="outline" className="order-list-row" key={order.id} onClick={() => go("tracking")}><IconTile><Shirt /></IconTile><div className="min-w-0 flex-1 text-left"><div className="flex items-center justify-between"><strong>#{order.id}</strong><span className="status-badge">{order.status}</span></div><p>{order.date} · {order.weight} kg · GH₵{order.weight * PRICE_PER_KG}.00</p></div><ChevronRight /></Button>)}</div> : <div className="empty-state"><Shirt /><h2>No orders yet</h2><p>Your first fresh load is only a few taps away.</p><Button onClick={() => go("booking")}>Book Laundry</Button></div>}</main></>;
+  return <><AppHeader title="My orders" action={<Button variant="ghost" size="icon" onClick={() => go("booking")} aria-label="New booking"><Plus /></Button>} /><main className="app-scroll has-dock p-5">{orders.length ? <div className="space-y-3">{[...orders].reverse().map((order) => <Button variant="outline" className="order-list-row" key={order.id} onClick={() => go("tracking")}><IconTile><Shirt /></IconTile><div className="min-w-0 flex-1 text-left"><div className="flex items-center justify-between"><strong>#{order.id}</strong><span className="status-badge">{order.status}</span></div><p>{order.date} · {order.weight} kg · GH₵{order.weight * PRICE_PER_KG}.00</p></div><ChevronRight /></Button>)}</div> : <div className="empty-state"><Shirt /><h2>No orders yet</h2><p>Your first fresh load is only a few taps away.</p><Button onClick={() => go("booking")}>Book Laundry</Button></div>}</main></>;
 }
 
 function NotificationsScreen({ read, setRead }: { read: boolean; setRead: (value: boolean) => void }) {
@@ -496,20 +496,78 @@ function NotificationsScreen({ read, setRead }: { read: boolean; setRead: (value
     ["Payment update", "Cash on Delivery is selected for your order.", "Yesterday", CircleDollarSign],
     ["Welcome!", "Thanks for choosing Affordable Laundry Service.", "2d ago", Sparkles],
   ] as const;
-  return <><AppHeader title="Notifications" action={<Button variant="link" className="px-0 text-xs" onClick={() => setRead(true)}>Mark all read</Button>} /><main className="app-scroll p-5"><div className="space-y-3">{notices.map(([title, copy, time, Icon], index) => <div className="notification-row" key={title}><IconTile><Icon /></IconTile><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><strong>{title}</strong><span>{time}</span></div><p>{copy}</p></div>{!read && index < 2 ? <i /> : null}</div>)}</div></main></>;
+  return <><AppHeader title="Notifications" action={<Button variant="link" className="px-0 text-xs" onClick={() => setRead(true)}>Mark all read</Button>} /><main className="app-scroll has-dock p-5"><div className="space-y-3">{notices.map(([title, copy, time, Icon], index) => <div className="notification-row" key={title}><IconTile><Icon /></IconTile><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><strong>{title}</strong><span>{time}</span></div><p>{copy}</p></div>{!read && index < 2 ? <i /> : null}</div>)}</div></main></>;
 }
 
 function ProfileScreen({ go }: { go: (screen: Screen) => void }) {
-  const rows = [
-    ["My Orders", PackageCheck, () => go("orders")],
-    ["Saved Addresses", MapPin, () => toast("Republic Hall is your saved address.")],
-    ["Payment Preferences", CircleDollarSign, () => go("payments")],
-    ["Notifications", Bell, () => go("notifications")],
-    ["Help & Support", HelpCircle, () => window.location.assign("tel:0532331150")],
-    ["Settings", Settings, () => toast("Demo preferences saved on this device.")],
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const account = [
+    ["Profile details", UserRound, "Bernard Atsu", () => toast.success("Profile details saved.")],
+    ["Phone number", Phone, "+233 53 233 1150", () => toast("Demo number kept on this device.")],
+    ["Saved address", MapPin, "Republic Hall", () => toast("Republic Hall is your saved address.")],
   ] as const;
-  return <><AppHeader title="Profile" /><main className="app-scroll p-5"><div className="profile-card"><div className="avatar-lg">BA</div><div><h2>Bernard Atsu</h2><p>+233 53 233 1150</p><Button variant="link" className="h-auto px-0 py-1" onClick={() => toast.success("Profile details saved.")}>Edit profile</Button></div></div><div className="mt-6 space-y-1">{rows.map(([label, Icon, action]) => <Button variant="ghost" className="profile-row" key={label} onClick={action}><IconTile><Icon /></IconTile><span>{label}</span><ChevronRight className="ml-auto text-muted-foreground" /></Button>)}</div><div className="contact-panel mt-6"><MapPin /><p>Gyinyase, opposite KNUST Business School, Kumasi</p><Phone /><p>0532331150 / 0243140855</p></div><Button variant="outline" className="mt-5 w-full text-destructive" onClick={() => go("auth")}><LogOut />Log out of demo</Button><Button variant="ghost" className="mt-2 w-full text-xs text-muted-foreground" onClick={() => go("admin")}>Switch to staff demo</Button></main></>;
+  const preferences = [
+    ["My orders", PackageCheck, "", () => go("orders")],
+    ["Payment preferences", CircleDollarSign, "Cash", () => go("payments")],
+    ["Notifications", Bell, "On", () => go("notifications")],
+    ["Settings", Settings, "", () => toast("Demo preferences saved on this device.")],
+  ] as const;
+  const faqs = [
+    ["When is pickup free?", "Pickup and delivery are free anywhere inside KNUST campus.", Truck],
+    ["How does GH₵13/kg work?", "You pay per kilogram; final weight is confirmed at pickup.", CircleDollarSign],
+    ["How fast is it?", "Most loads are washed, ironed and back within 24 hours.", Clock3],
+  ] as const;
+  return (
+    <>
+      <AppHeader title="Profile" />
+      <main className="app-scroll has-dock p-5">
+        <div className="profile-card"><div className="avatar-lg">BA</div><div><h2>Bernard Atsu</h2><p>+233 53 233 1150</p><Button variant="link" className="h-auto px-0 py-1" onClick={() => toast.success("Profile details saved.")}>Edit profile</Button></div></div>
+
+        <p className="group-label">Account</p>
+        <div className="group-card">
+          {account.map(([label, Icon, value, action]) => <Button variant="ghost" className="group-row" key={label} onClick={action}><Icon /><span>{label}</span><em>{value}</em><ChevronRight className="size-4 text-muted-foreground" /></Button>)}
+        </div>
+
+        <p className="group-label">Preferences</p>
+        <div className="group-card">
+          {preferences.map(([label, Icon, value, action]) => <Button variant="ghost" className="group-row" key={label} onClick={action}><Icon /><span>{label}</span><em>{value}</em><ChevronRight className="size-4 text-muted-foreground" /></Button>)}
+        </div>
+
+        <h2 className="mt-8 font-display text-xl font-extrabold leading-tight text-foreground">How can we help you today?</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Frequently asked questions</p>
+        <div className="faq-rail mt-3">
+          {faqs.map(([question, answer, Icon]) => <Button variant="ghost" className="faq-card" key={question} onClick={() => toast(answer)}><Icon /><strong>{question}</strong><p>{answer}</p></Button>)}
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <Button variant="outline" className="h-12" onClick={() => window.location.assign("tel:0532331150")}><Phone />Call us</Button>
+          <Button variant="outline" className="h-12" onClick={() => toast("Help centre demo opened.")}><HelpCircle />Help centre</Button>
+        </div>
+
+        <div className="contact-panel mt-6"><MapPin /><p>Gyinyase, opposite KNUST Business School, Kumasi</p><Phone /><p>0532331150 / 0243140855</p></div>
+
+        <p className="group-label">Session</p>
+        <div className="group-card">
+          <Button variant="ghost" className="group-row" onClick={() => go("admin")}><UsersRound /><span>Switch to staff demo</span><ChevronRight className="ml-auto size-4 text-muted-foreground" /></Button>
+          <Button variant="ghost" className="group-row group-row-danger" onClick={() => setConfirmLogout(true)}><LogOut /><span>Log out of demo</span></Button>
+        </div>
+      </main>
+      {confirmLogout ? (
+        <div className="sheet-overlay" onClick={() => setConfirmLogout(false)}>
+          <div className="sheet" onClick={(event) => event.stopPropagation()}>
+            <div className="sheet-handle" />
+            <div className="sheet-icon"><LogOut /></div>
+            <h2>Log out of the demo?</h2>
+            <p>You will return to the sign-in screen. Your saved demo bookings stay on this device.</p>
+            <Button className="mt-5 h-13 w-full bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { setConfirmLogout(false); go("auth"); }}>Log out</Button>
+            <Button variant="ghost" className="mt-2 h-12 w-full" onClick={() => setConfirmLogout(false)}>Stay signed in</Button>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
 }
+
 
 function AdminScreen({ go, orders, setOrders, filter, setFilter, query, setQuery }: { go: (screen: Screen) => void; orders: Booking[]; setOrders: (orders: Booking[]) => void; filter: string; setFilter: (value: string) => void; query: string; setQuery: (value: string) => void }) {
   const allOrders = useMemo(() => orders.length > 1 ? orders : [baseOrder, { ...baseOrder, id: "AL0002", status: "Processing", location: "KNUST, Unity Hall", weight: 5 }, { ...baseOrder, id: "AL0003", status: "Delivered", location: "Gyinyase", weight: 2 }], [orders]);
