@@ -326,7 +326,7 @@ export function LaundryApp() {
     <AppFrame>
       <div className="flex h-full flex-col bg-background">
         {content}
-        {screen !== "admin" && !["services", "booking", "payments"].includes(screen) ? <BottomNav active={screen} go={go} /> : null}
+        {screen !== "admin" && !["services", "booking", "payments"].includes(screen) ? <BottomNav active={screen} go={go} alerts={notificationsRead ? 0 : 2} activeOrders={orders.filter((order) => order.status !== "Delivered").length} /> : null}
       </div>
     </AppFrame>
   );
