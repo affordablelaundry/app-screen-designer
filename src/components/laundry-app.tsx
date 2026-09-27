@@ -12,7 +12,6 @@ import {
   FoldHorizontal,
   HelpCircle,
   Home,
-  Iron,
   ListFilter,
   LocateFixed,
   LogOut,
@@ -387,7 +386,7 @@ function ServicesScreen({ go, weight, setWeight }: { go: (screen: Screen) => voi
   const services = [
     ["Washing", "Fresh, hygienic garment care", WashingMachine],
     ["Drying", "Quick and fabric-safe", Wind],
-    ["Ironing", "Crisp and wrinkle-free", Iron],
+    ["Ironing", "Crisp and wrinkle-free", Sparkles],
     ["Folding", "Neatly packed for you", FoldHorizontal],
   ] as const;
   return (
