@@ -110,15 +110,15 @@ function AppHeader({ title, onBack, action }: { title: string; onBack?: () => vo
   );
 }
 
-function BottomNav({ active, go }: { active: Screen; go: (screen: Screen) => void }) {
+function BottomNav({ active, go, alerts = 0, activeOrders = 0 }: { active: Screen; go: (screen: Screen) => void; alerts?: number; activeOrders?: number }) {
   const items = [
-    { screen: "home" as Screen, label: "Home", icon: Home },
-    { screen: "orders" as Screen, label: "Orders", icon: PackageCheck },
-    { screen: "notifications" as Screen, label: "Notifications", icon: Bell },
-    { screen: "profile" as Screen, label: "Profile", icon: UserRound },
+    { screen: "home" as Screen, label: "Home", icon: Home, badge: 0 },
+    { screen: "orders" as Screen, label: "Orders", icon: PackageCheck, badge: activeOrders },
+    { screen: "notifications" as Screen, label: "Alerts", icon: Bell, badge: alerts },
+    { screen: "profile" as Screen, label: "Profile", icon: UserRound, badge: 0 },
   ];
   return (
-    <nav className="bottom-nav" aria-label="Main navigation">
+    <nav className="dock" aria-label="Main navigation">
       {items.map((item) => {
         const Icon = item.icon;
         const selected = active === item.screen || (active === "tracking" && item.screen === "orders");
@@ -126,12 +126,13 @@ function BottomNav({ active, go }: { active: Screen; go: (screen: Screen) => voi
           <Button
             key={item.screen}
             variant="ghost"
-            className={selected ? "bottom-nav-item bottom-nav-item-active" : "bottom-nav-item"}
+            className={selected ? "dock-item dock-item-active" : "dock-item"}
             onClick={() => go(item.screen)}
             aria-label={item.label}
           >
             <Icon />
             <span>{item.label}</span>
+            {item.badge > 0 && !selected ? <i className="dock-badge">{item.badge}</i> : null}
           </Button>
         );
       })}
