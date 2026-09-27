@@ -156,11 +156,12 @@
 .app-stage {
   min-height: 100svh;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   background: linear-gradient(145deg, color-mix(in oklab, var(--background) 85%, var(--card)), var(--secondary));
 }
 
-.phone-shell { width: 100%; min-height: 100svh; position: relative; }
+.phone-shell { width: 100%; min-width: 0; max-width: 100%; min-height: 100svh; position: relative; }
 .phone-screen { height: 100svh; min-height: 640px; overflow: hidden; background: var(--background); }
 .desktop-brand { display: none; }
 .app-scroll { flex: 1; overflow-y: auto; scrollbar-width: none; }
