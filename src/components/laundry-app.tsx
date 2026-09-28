@@ -23,6 +23,7 @@ import {
   Search,
   Settings,
   Shirt,
+  Sparkles,
   Truck,
   UserRound,
   UsersRound,
@@ -31,6 +32,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import logoAsset from "@/assets/affordable-laundry-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
 
 type Screen =
@@ -84,11 +86,11 @@ const screenTitles: Partial<Record<Screen, string>> = {
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={compact ? "brand-lockup brand-lockup-compact" : "brand-lockup"}>
-      <span className="brand-rule" aria-hidden="true" />
+    <div className="flex items-center gap-2.5">
+      <img className={compact ? "size-9 rounded-full" : "size-16 rounded-2xl"} src={logoAsset.url} alt="Affordable Laundry Service" />
       <div>
-        <p className="brand-name">Affordable Laundry</p>
-        <p className="brand-tagline">Kumasi laundry care</p>
+        <p className="font-display text-sm font-bold text-foreground">Affordable Laundry</p>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Clean Clothes • Fresh Start</p>
       </div>
     </div>
   );
@@ -193,7 +195,7 @@ export function LaundryApp() {
       toast.error("Enter a valid phone or email and at least 6 password characters.");
       return;
     }
-    toast.success(authMode === "login" ? "Welcome back." : "Account ready.");
+    toast.success(authMode === "login" ? "Welcome back!" : "Demo account created.");
     setHistory([]);
     setScreen("home");
   };
@@ -228,18 +230,16 @@ export function LaundryApp() {
     return (
       <AppFrame immersive>
         <div className="splash-screen">
-          <div className="splash-copy">
-            <p className="splash-kicker">Laundry care · Kumasi</p>
-            <h1>Affordable<br />Laundry</h1>
-            <p>Collected, carefully cleaned, and returned within 24 hours.</p>
+          <div className="bubble bubble-one" />
+          <div className="bubble bubble-two" />
+          <div className="relative z-10 flex flex-1 flex-col items-center justify-center text-center">
+            <img className="splash-logo" src={logoAsset.url} alt="Affordable Laundry Service" />
+            <h1 className="mt-6 font-display text-3xl font-extrabold text-primary-foreground">Affordable Laundry</h1>
+            <p className="mt-2 text-sm font-medium text-primary-foreground/80">Clean Clothes • Fresh Start</p>
           </div>
-          <div className="splash-facts" aria-label="Service summary">
-            <div><strong>GH₵13</strong><span>per kilogram</span></div>
-            <div><strong>24 hrs</strong><span>standard turnaround</span></div>
-          </div>
-          <div className="splash-actions">
-            <Button className="h-13 w-full bg-card text-foreground hover:bg-card/90" onClick={() => go("onboarding-1")}>Get started</Button>
-            <Button variant="ghost" className="w-full text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" onClick={() => go("auth")}>Sign in</Button>
+          <div className="relative z-10 space-y-3 px-6 pb-8">
+            <Button className="h-13 w-full bg-card text-primary hover:bg-card/90" onClick={() => go("onboarding-1")}>Get Started</Button>
+            <Button variant="ghost" className="w-full text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" onClick={() => go("auth")}>Already have an account? Log in</Button>
           </div>
         </div>
       </AppFrame>
@@ -254,15 +254,8 @@ export function LaundryApp() {
           <div className="flex justify-end p-5">
             <Button variant="ghost" onClick={() => go("auth")}>Skip</Button>
           </div>
-          <div className="onboarding-art" aria-hidden="true">
-            <span className="onboarding-number">{second ? "02" : "01"}</span>
-            <div className="onboarding-process">
-              <span>{second ? "Pickup" : "Wash"}</span>
-              <i />
-              <span>{second ? "Care" : "Dry"}</span>
-              <i />
-              <span>{second ? "Return" : "Fold"}</span>
-            </div>
+          <div className="onboarding-art">
+            {second ? <Truck className="size-24 text-primary" strokeWidth={1.4} /> : <img className="size-40 rounded-full object-cover" src={logoAsset.url} alt="Laundry pickup service" />}
           </div>
           <div className="flex flex-1 flex-col px-7 pb-8">
             <p className="eyebrow">{second ? "Pickup & delivery" : "Easy laundry care"}</p>
@@ -308,10 +301,10 @@ export function LaundryApp() {
               <input name="password" type={showPassword ? "text" : "password"} className="app-input pr-12" required minLength={6} maxLength={72} placeholder="At least 6 characters" />
               <Button type="button" variant="ghost" size="icon" className="absolute bottom-1 right-1" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff /> : <Eye />}</Button>
             </label>
-            {authMode === "login" ? <Button type="button" variant="link" className="ml-auto flex px-0" onClick={() => toast("Password reset instructions sent.")}>Forgot password?</Button> : null}
+            {authMode === "login" ? <Button type="button" variant="link" className="ml-auto flex px-0" onClick={() => toast("Demo reset link sent.")}>Forgot password?</Button> : null}
             <Button type="submit" className="h-13 w-full">{authMode === "login" ? "Login" : "Create Account"}</Button>
           </form>
-          <Button variant="ghost" className="mt-8 w-full text-xs text-muted-foreground" onClick={() => go("admin")}>Staff workspace</Button>
+          <Button variant="ghost" className="mt-8 w-full text-xs text-muted-foreground" onClick={() => go("admin")}>Open staff demo</Button>
         </main>
       </AppFrame>
     );
@@ -343,7 +336,7 @@ function AppFrame({ children, immersive = false }: { children: ReactNode; immers
   return (
     <div className="app-stage">
       <div className={immersive ? "phone-shell phone-shell-immersive" : "phone-shell"}>
-        <div className="desktop-brand"><Brand compact /><p>Pickup and delivery across KNUST</p></div>
+        <div className="desktop-brand"><Brand compact /><p>Mobile frontend demo</p></div>
         <div className="phone-screen">{children}</div>
       </div>
     </div>
@@ -351,45 +344,76 @@ function AppFrame({ children, immersive = false }: { children: ReactNode; immers
 }
 
 function HomeScreen({ go, latestOrder }: { go: (screen: Screen) => void; latestOrder: Booking }) {
+  const [category, setCategory] = useState("Wash & Fold");
+  const categories = [
+    { label: "Wash & Fold", note: "GH₵13/kg", icon: WashingMachine },
+    { label: "Ironing", note: "Crisp", icon: Sparkles },
+    { label: "Express", note: "12 hrs", icon: Clock3 },
+    { label: "Drying", note: "Fabric-safe", icon: Wind },
+    { label: "Folding", note: "Neat", icon: FoldHorizontal },
+  ];
+  const tiles = [
+    { label: "Book", icon: WashingMachine, screen: "booking" as Screen },
+    { label: "Track", icon: Truck, screen: "tracking" as Screen },
+    { label: "Pricing", icon: Shirt, screen: "services" as Screen },
+    { label: "Orders", icon: PackageCheck, screen: "orders" as Screen },
+    { label: "Payment", icon: CircleDollarSign, screen: "payments" as Screen },
+    { label: "Support", icon: Phone, screen: "profile" as Screen },
+  ];
   return (
-    <div className="app-scroll has-dock home-screen px-5 pt-7">
+    <div className="app-scroll has-dock px-5 pt-7">
       <header className="flex items-start justify-between">
         <div>
-          <p className="hero-greeting">Good morning</p>
+          <p className="hero-greeting">Good morning,</p>
           <h1 className="hero-title">Bernard</h1>
-          <span className="hero-place"><MapPin />Republic Hall, KNUST</span>
+          <span className="hero-place"><MapPin />KNUST Campus · Republic Hall</span>
         </div>
-        <Button variant="outline" size="icon" className="header-action" onClick={() => go("notifications")} aria-label="Notifications"><Bell /></Button>
+        <Button variant="outline" size="icon" className="mt-1 rounded-full" onClick={() => go("notifications")} aria-label="Notifications"><Bell /></Button>
       </header>
 
-      <div className="section-heading mt-8"><div><p>Current order</p><h2>Laundry in progress</h2></div><span>01</span></div>
-      <Button variant="ghost" className="active-order mt-3" onClick={() => go("tracking")}> 
+      <h2 className="section-title mt-7">Active order</h2>
+      <Button variant="outline" className="active-order mt-2" onClick={() => go("tracking")}>
         <div className="active-order-top">
           <div>
             <span className="status-badge">{latestOrder.status}</span>
-            <h3 className="mt-3">Order #{latestOrder.id}</h3>
-            <small>{latestOrder.weight} kg · GH₵{latestOrder.weight * PRICE_PER_KG}.00</small>
+            <h3 className="mt-2">Order #{latestOrder.id}</h3>
+            <small>{latestOrder.weight} kg · GH₵{latestOrder.weight * PRICE_PER_KG}.00 · {latestOrder.payment}</small>
           </div>
-          <span className="order-time">Ready<br /><strong>Tomorrow</strong></span>
+          <span className="pill-cta">Track live<ChevronRight /></span>
         </div>
         <div className="progress-track"><span /></div>
-        <div className="order-foot"><span>Picked up</span><span>Track order <ChevronRight /></span></div>
+        <div className="flex w-full justify-between text-[10px] font-medium text-muted-foreground"><span>Picked up</span><span>Ready in 24 hours</span></div>
       </Button>
 
-      <div className="section-heading mt-8"><div><p>Services</p><h2>What can we take care of?</h2></div><Button variant="link" onClick={() => go("services")}>See pricing</Button></div>
-      <div className="service-grid mt-3">
-        <Button variant="ghost" onClick={() => go("booking")}><span>Wash & fold</span><small>GH₵13/kg · 24 hours</small><ChevronRight /></Button>
-        <Button variant="ghost" onClick={() => go("booking")}><span>Iron & fold</span><small>Carefully pressed</small><ChevronRight /></Button>
+      <h2 className="section-title mt-7">Choose a service</h2>
+      <div className="chip-rail mt-3">
+        {categories.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Button key={item.label} variant="ghost" className={category === item.label ? "chip chip-active" : "chip"} onClick={() => { setCategory(item.label); toast(`${item.label} selected · ${item.note}`); }}>
+              <span className="chip-ring"><Icon /></span>
+              <small>{item.label}</small>
+              <em>{item.note}</em>
+            </Button>
+          );
+        })}
       </div>
 
-      <div className="home-primary-action mt-7">
-        <div><p>Next available pickup</p><strong>Today · 2:00–4:00 PM</strong></div>
-        <Button onClick={() => go("booking")}>Book pickup</Button>
-      </div>
+      <section className="promo-banner mt-7">
+        <div className="relative z-10 max-w-[62%]">
+          <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">24-hour care</p>
+          <h2 className="mt-2 font-display text-2xl font-extrabold leading-tight text-primary-foreground">Laundry from GH₵13/kg</h2>
+          <Button className="mt-5 bg-card text-primary hover:bg-card/90" onClick={() => go("booking")}>Book Laundry</Button>
+        </div>
+        <WashingMachine className="absolute -bottom-3 -right-2 size-32 text-primary-foreground/20" strokeWidth={1.2} />
+      </section>
 
-      <div className="secondary-links mt-4">
-        <Button variant="ghost" onClick={() => go("orders")}><span>Order history</span><ChevronRight /></Button>
-        <Button variant="ghost" onClick={() => go("profile")}><span>Support & contact</span><ChevronRight /></Button>
+      <h2 className="section-title mt-7">Quick actions</h2>
+      <div className="tile-grid mt-3">
+        {tiles.map((tile) => {
+          const Icon = tile.icon;
+          return <Button key={tile.label} variant="ghost" className="tile" onClick={() => go(tile.screen)}><Icon /><span>{tile.label}</span></Button>;
+        })}
       </div>
     </div>
   );
@@ -400,7 +424,7 @@ function ServicesScreen({ go, weight, setWeight }: { go: (screen: Screen) => voi
   const services = [
     ["Washing", "Fresh, hygienic garment care", WashingMachine],
     ["Drying", "Quick and fabric-safe", Wind],
-    ["Ironing", "Crisp and wrinkle-free", Shirt],
+    ["Ironing", "Crisp and wrinkle-free", Sparkles],
     ["Folding", "Neatly packed for you", FoldHorizontal],
   ] as const;
   return (
@@ -458,7 +482,7 @@ function TrackingScreen({ order, back }: { order: Booking; back: () => void }) {
 }
 
 function PaymentsScreen({ payment, setPayment, back }: { payment: string; setPayment: (value: string) => void; back: () => void }) {
-  return <><AppHeader title="Payment method" onBack={back} /><main className="app-scroll p-5"><div className="demo-notice"><Clock3 /><p><strong>Pay after weighing</strong><br />Your final total is confirmed when we collect your laundry.</p></div><h2 className="section-title mt-7">Choose how to pay</h2><div className="mt-3"><PaymentChoices value={payment} setValue={setPayment} /></div><div className="summary-box mt-6"><div><span>Selected method</span><strong>{payment}</strong></div><div><span>Payment timing</span><strong>{payment === "Cash on Delivery" ? "When your laundry arrives" : "After final weight confirmation"}</strong></div></div><Button className="mt-6 h-13 w-full" onClick={() => toast.success(`${payment} saved.`)}>Save payment method</Button></main></>;
+  return <><AppHeader title="Payment method" onBack={back} /><main className="app-scroll p-5"><div className="demo-notice"><Sparkles /><p><strong>Frontend demonstration</strong><br />No real payment details are collected or processed.</p></div><h2 className="section-title mt-6">Choose how to pay</h2><div className="mt-3"><PaymentChoices value={payment} setValue={setPayment} /></div><div className="summary-box mt-6"><div><span>Selected method</span><strong>{payment}</strong></div><div><span>When you pay</span><strong>{payment === "Cash on Delivery" ? "When your laundry arrives" : "After final weight confirmation"}</strong></div></div><Button className="mt-6 h-13 w-full" onClick={() => toast.success(`${payment} selected for this demo.`)}>Confirm Demo Method</Button></main></>;
 }
 
 function OrdersScreen({ orders, go }: { orders: Booking[]; go: (screen: Screen) => void }) {
@@ -470,7 +494,7 @@ function NotificationsScreen({ read, setRead }: { read: boolean; setRead: (value
     ["Order confirmed", "Your order #AL0001 has been confirmed.", "Just now", PackageCheck],
     ["Pickup complete", "Your laundry is heading to our care team.", "2h ago", Truck],
     ["Payment update", "Cash on Delivery is selected for your order.", "Yesterday", CircleDollarSign],
-    ["Welcome", "Thanks for choosing Affordable Laundry Service.", "2d ago", Shirt],
+    ["Welcome!", "Thanks for choosing Affordable Laundry Service.", "2d ago", Sparkles],
   ] as const;
   return <><AppHeader title="Notifications" action={<Button variant="link" className="px-0 text-xs" onClick={() => setRead(true)}>Mark all read</Button>} /><main className="app-scroll has-dock p-5"><div className="space-y-3">{notices.map(([title, copy, time, Icon], index) => <div className="notification-row" key={title}><IconTile><Icon /></IconTile><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><strong>{title}</strong><span>{time}</span></div><p>{copy}</p></div>{!read && index < 2 ? <i /> : null}</div>)}</div></main></>;
 }
@@ -479,14 +503,14 @@ function ProfileScreen({ go }: { go: (screen: Screen) => void }) {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const account = [
     ["Profile details", UserRound, "Bernard Atsu", () => toast.success("Profile details saved.")],
-    ["Phone number", Phone, "+233 53 233 1150", () => toast("Phone number saved on this device.")],
+    ["Phone number", Phone, "+233 53 233 1150", () => toast("Demo number kept on this device.")],
     ["Saved address", MapPin, "Republic Hall", () => toast("Republic Hall is your saved address.")],
   ] as const;
   const preferences = [
     ["My orders", PackageCheck, "", () => go("orders")],
     ["Payment preferences", CircleDollarSign, "Cash", () => go("payments")],
     ["Notifications", Bell, "On", () => go("notifications")],
-    ["Settings", Settings, "", () => toast("Preferences saved on this device.")],
+    ["Settings", Settings, "", () => toast("Demo preferences saved on this device.")],
   ] as const;
   const faqs = [
     ["When is pickup free?", "Pickup and delivery are free anywhere inside KNUST campus.", Truck],
@@ -517,15 +541,15 @@ function ProfileScreen({ go }: { go: (screen: Screen) => void }) {
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <Button variant="outline" className="h-12" onClick={() => window.location.assign("tel:0532331150")}><Phone />Call us</Button>
-          <Button variant="outline" className="h-12" onClick={() => toast("Help centre opened.")}><HelpCircle />Help centre</Button>
+          <Button variant="outline" className="h-12" onClick={() => toast("Help centre demo opened.")}><HelpCircle />Help centre</Button>
         </div>
 
         <div className="contact-panel mt-6"><MapPin /><p>Gyinyase, opposite KNUST Business School, Kumasi</p><Phone /><p>0532331150 / 0243140855</p></div>
 
         <p className="group-label">Session</p>
         <div className="group-card">
-          <Button variant="ghost" className="group-row" onClick={() => go("admin")}><UsersRound /><span>Open staff workspace</span><ChevronRight className="ml-auto size-4 text-muted-foreground" /></Button>
-          <Button variant="ghost" className="group-row group-row-danger" onClick={() => setConfirmLogout(true)}><LogOut /><span>Log out</span></Button>
+          <Button variant="ghost" className="group-row" onClick={() => go("admin")}><UsersRound /><span>Switch to staff demo</span><ChevronRight className="ml-auto size-4 text-muted-foreground" /></Button>
+          <Button variant="ghost" className="group-row group-row-danger" onClick={() => setConfirmLogout(true)}><LogOut /><span>Log out of demo</span></Button>
         </div>
       </main>
       {confirmLogout ? (
@@ -533,8 +557,8 @@ function ProfileScreen({ go }: { go: (screen: Screen) => void }) {
           <div className="sheet" onClick={(event) => event.stopPropagation()}>
             <div className="sheet-handle" />
             <div className="sheet-icon"><LogOut /></div>
-            <h2>Log out?</h2>
-            <p>You will return to the sign-in screen. Your saved bookings will stay on this device.</p>
+            <h2>Log out of the demo?</h2>
+            <p>You will return to the sign-in screen. Your saved demo bookings stay on this device.</p>
             <Button className="mt-5 h-13 w-full bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { setConfirmLogout(false); go("auth"); }}>Log out</Button>
             <Button variant="ghost" className="mt-2 h-12 w-full" onClick={() => setConfirmLogout(false)}>Stay signed in</Button>
           </div>
@@ -554,5 +578,5 @@ function AdminScreen({ go, orders, setOrders, filter, setFilter, query, setQuery
     window.localStorage.setItem("affordable-laundry-orders", JSON.stringify(next));
     toast.success(`Order #${id} updated.`);
   };
-  return <div className="flex h-full flex-col bg-background"><header className="admin-header"><div className="flex items-center justify-between"><div><p className="text-xs text-primary-foreground/70">Staff workspace</p><h1 className="font-display text-xl font-extrabold text-primary-foreground">Today’s operations</h1></div><div className="avatar-sm">BA</div></div><div className="admin-stats"><div><strong>{allOrders.length}</strong><span>Total orders</span></div><div><strong>{allOrders.filter((order) => order.status !== "Delivered").length}</strong><span>In progress</span></div><div><strong>{allOrders.filter((order) => order.status === "Delivered").length}</strong><span>Completed</span></div></div></header><main className="app-scroll p-5"><div className="flex items-center justify-between"><h2 className="section-title">Manage orders</h2><Button variant="ghost" size="icon" onClick={() => toast("Services: GH₵13/kg · 24-hour turnaround") } aria-label="Service settings"><Settings /></Button></div><label className="search-field mt-3"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search order or location" /></label><div className="filter-tabs mt-3">{["All", "Processing", "Delivered"].map((item) => <Button variant="ghost" className={filter === item ? "filter-active" : ""} key={item} onClick={() => setFilter(item)}>{item}</Button>)}</div><div className="mt-4 space-y-3">{visible.map((order) => <div className="admin-order" key={order.id}><div className="flex items-start justify-between"><div><strong>#{order.id}</strong><p>{order.location}</p></div><span className="status-badge">{order.status}</span></div><div className="mt-3 flex items-center justify-between text-xs"><span>{order.weight} kg · GH₵{order.weight * PRICE_PER_KG}.00</span><Button variant="outline" size="sm" onClick={() => updateStatus(order.id)}>{order.status === "Delivered" ? "Completed" : "Update status"}</Button></div></div>)}</div><div className="admin-tools mt-6"><Button variant="outline" onClick={() => toast("18 customer records available.")}><UsersRound />Customers</Button><Button variant="outline" onClick={() => toast("Services and pricing opened.")}><ListFilter />Services</Button><Button variant="outline" onClick={() => toast("Delivery areas opened.")}><LocateFixed />Delivery</Button><Button variant="outline" onClick={() => toast("Business hours: 7 AM – 7 PM.")}><Clock3 />Settings</Button></div></main><div className="border-t border-border bg-card p-3"><Button variant="ghost" className="w-full" onClick={() => go("home")}><ArrowLeft />Return to customer app</Button></div></div>;
+  return <div className="flex h-full flex-col bg-background"><header className="admin-header"><div className="flex items-center justify-between"><div><p className="text-xs text-primary-foreground/70">Staff workspace</p><h1 className="font-display text-xl font-extrabold text-primary-foreground">Operations overview</h1></div><div className="avatar-sm">AB</div></div><div className="admin-stats"><div><strong>{allOrders.length}</strong><span>Total orders</span></div><div><strong>{allOrders.filter((order) => order.status !== "Delivered").length}</strong><span>In progress</span></div><div><strong>{allOrders.filter((order) => order.status === "Delivered").length}</strong><span>Completed</span></div></div></header><main className="app-scroll p-5"><div className="flex items-center justify-between"><h2 className="section-title">Manage orders</h2><Button variant="ghost" size="icon" onClick={() => toast("Services: GH₵13/kg · 24-hour turnaround") } aria-label="Service settings"><Settings /></Button></div><label className="search-field mt-3"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search order or location" /></label><div className="filter-tabs mt-3">{["All", "Processing", "Delivered"].map((item) => <Button variant="ghost" className={filter === item ? "filter-active" : ""} key={item} onClick={() => setFilter(item)}>{item}</Button>)}</div><div className="mt-4 space-y-3">{visible.map((order) => <div className="admin-order" key={order.id}><div className="flex items-start justify-between"><div><strong>#{order.id}</strong><p>{order.location}</p></div><span className="status-badge">{order.status}</span></div><div className="mt-3 flex items-center justify-between text-xs"><span>{order.weight} kg · GH₵{order.weight * PRICE_PER_KG}.00</span><Button variant="outline" size="sm" onClick={() => updateStatus(order.id)}>{order.status === "Delivered" ? "Completed" : "Update status"}</Button></div></div>)}</div><div className="admin-tools mt-6"><Button variant="outline" onClick={() => toast("Customer list: 18 demo customers.")}><UsersRound />Customers</Button><Button variant="outline" onClick={() => toast("Services & pricing demo opened.")}><ListFilter />Services</Button><Button variant="outline" onClick={() => toast("Delivery area settings opened.")}><LocateFixed />Delivery</Button><Button variant="outline" onClick={() => toast("Business hours: 7 AM – 7 PM.")}><Clock3 />Settings</Button></div></main><div className="border-t border-border bg-card p-3"><Button variant="ghost" className="w-full" onClick={() => go("home")}><ArrowLeft />Return to customer app</Button></div></div>;
 }

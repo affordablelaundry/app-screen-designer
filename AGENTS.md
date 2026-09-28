@@ -10,4 +10,3 @@
 <!-- LOVABLE:END -->
 
 - Keep the product as a single mobile-first frontend prototype with local state/storage only, because backend services are explicitly out of scope.
-- Use an industrial-minimal mobile UI with ink-and-cyan tokens, Sora/Manrope typography, editorial hierarchy, and no mascot or decorative brand iconography, because the product must feel credible and human-designed.
