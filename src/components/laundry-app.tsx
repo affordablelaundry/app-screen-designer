@@ -1,582 +1,298 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  ArrowLeft,
-  Bell,
-  CalendarDays,
+  ArrowRight,
   Check,
-  ChevronRight,
-  CircleDollarSign,
+  ChevronDown,
   Clock3,
-  Eye,
-  EyeOff,
-  FoldHorizontal,
-  HelpCircle,
-  Home,
-  ListFilter,
-  LocateFixed,
-  LogOut,
+  Instagram,
   MapPin,
+  Menu,
   Minus,
   PackageCheck,
   Phone,
   Plus,
-  Search,
-  Settings,
   Shirt,
   Sparkles,
   Truck,
-  UserRound,
-  UsersRound,
   WashingMachine,
-  Wind,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import heroImage from "@/assets/laundry-atelier-hero.jpg";
 import logoAsset from "@/assets/affordable-laundry-logo.png.asset.json";
 import { Button } from "@/components/ui/button";
 
-type Screen =
-  | "splash"
-  | "onboarding-1"
-  | "onboarding-2"
-  | "auth"
-  | "home"
-  | "services"
-  | "booking"
-  | "tracking"
-  | "payments"
-  | "orders"
-  | "notifications"
-  | "profile"
-  | "admin";
+type LaundryItem = {
+  id: string;
+  name: string;
+  note: string;
+  price: number;
+};
 
 type Booking = {
   id: string;
+  customer: string;
+  phone: string;
   location: string;
   date: string;
-  time: string;
-  weight: number;
-  notes: string;
-  payment: string;
+  items: Record<string, number>;
+  total: number;
   status: string;
 };
 
-const PRICE_PER_KG = 13;
+const laundryItems: LaundryItem[] = [
+  { id: "tshirt", name: "T-shirt", note: "Washed, pressed & folded", price: 4 },
+  { id: "shirt", name: "Dress shirt", note: "Carefully pressed on a hanger", price: 5 },
+  { id: "trousers", name: "Trousers", note: "Cleaned with a crisp finish", price: 6 },
+  { id: "dress", name: "Dress", note: "Gentle fabric-conscious care", price: 10 },
+  { id: "hoodie", name: "Hoodie", note: "Deep clean and fresh finish", price: 10 },
+  { id: "bedsheet", name: "Bedsheet", note: "Freshly washed and folded", price: 12 },
+  { id: "jacket", name: "Jacket", note: "Detailed outerwear care", price: 15 },
+  { id: "suit", name: "Two-piece suit", note: "Premium specialist cleaning", price: 25 },
+];
 
-const baseOrder: Booking = {
-  id: "AL0001",
-  location: "KNUST, Republic Hall",
-  date: "28 Sep 2026",
-  time: "10:00 AM",
-  weight: 3,
-  notes: "Handle white shirts separately",
-  payment: "Cash on Delivery",
-  status: "Picked Up",
-};
+const services = [
+  { number: "01", title: "Wash & fold", copy: "Everyday clothes returned fresh, soft and neatly folded.", icon: WashingMachine },
+  { number: "02", title: "Press & finish", copy: "Careful ironing for a clean, confident, ready-to-wear finish.", icon: Sparkles },
+  { number: "03", title: "Pickup & delivery", copy: "Free collection and return within KNUST, right on schedule.", icon: Truck },
+];
 
-const screenTitles: Partial<Record<Screen, string>> = {
-  services: "Services & pricing",
-  booking: "Book laundry",
-  tracking: "Track order",
-  payments: "Payment method",
-  orders: "My orders",
-  notifications: "Notifications",
-  profile: "Profile",
-};
+const savedBookingKey = "affordable-laundry-website-booking";
+const navigationItems = [
+  { label: "Services", id: "services" },
+  { label: "Pricing", id: "pricing" },
+  { label: "How it works", id: "process" },
+  { label: "Contact", id: "contact" },
+];
 
-function Brand({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <img className={compact ? "size-9 rounded-full" : "size-16 rounded-2xl"} src={logoAsset.url} alt="Affordable Laundry Service" />
-      <div>
-        <p className="font-display text-sm font-bold text-foreground">Affordable Laundry</p>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Clean Clothes • Fresh Start</p>
-      </div>
-    </div>
-  );
-}
-
-function AppHeader({ title, onBack, action }: { title: string; onBack?: () => void; action?: ReactNode }) {
-  return (
-    <header className="flex min-h-16 items-center gap-3 border-b border-border bg-card px-5">
-      {onBack ? (
-        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Go back">
-          <ArrowLeft />
-        </Button>
-      ) : null}
-      <h1 className="flex-1 font-display text-lg font-bold text-foreground">{title}</h1>
-      {action}
-    </header>
-  );
-}
-
-function BottomNav({ active, go, alerts = 0, activeOrders = 0 }: { active: Screen; go: (screen: Screen) => void; alerts?: number; activeOrders?: number }) {
-  const items = [
-    { screen: "home" as Screen, label: "Home", icon: Home, badge: 0 },
-    { screen: "orders" as Screen, label: "Orders", icon: PackageCheck, badge: activeOrders },
-    { screen: "notifications" as Screen, label: "Alerts", icon: Bell, badge: alerts },
-    { screen: "profile" as Screen, label: "Profile", icon: UserRound, badge: 0 },
-  ];
-  return (
-    <nav className="dock" aria-label="Main navigation">
-      {items.map((item) => {
-        const Icon = item.icon;
-        const selected = active === item.screen || (active === "tracking" && item.screen === "orders");
-        return (
-          <Button
-            key={item.screen}
-            variant="ghost"
-            className={selected ? "dock-item dock-item-active" : "dock-item"}
-            onClick={() => go(item.screen)}
-            aria-label={item.label}
-          >
-            <Icon />
-            <span>{item.label}</span>
-            {item.badge > 0 && !selected ? <i className="dock-badge">{item.badge}</i> : null}
-          </Button>
-        );
-      })}
-    </nav>
-  );
-}
-
-function IconTile({ children }: { children: ReactNode }) {
-  return <span className="icon-tile">{children}</span>;
+function scrollToSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 export function LaundryApp() {
-  const [screen, setScreen] = useState<Screen>("splash");
-  const [history, setHistory] = useState<Screen[]>([]);
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
-  const [showPassword, setShowPassword] = useState(false);
-  const [bookingStep, setBookingStep] = useState(1);
-  const [weight, setWeight] = useState(3);
-  const [location, setLocation] = useState("");
-  const [pickupDate, setPickupDate] = useState("");
-  const [pickupTime, setPickupTime] = useState("");
-  const [notes, setNotes] = useState("");
-  const [payment, setPayment] = useState("Cash on Delivery");
-  const [orders, setOrders] = useState<Booking[]>([baseOrder]);
-  const [notificationsRead, setNotificationsRead] = useState(false);
-  const [adminFilter, setAdminFilter] = useState("All");
-  const [adminQuery, setAdminQuery] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingComplete, setBookingComplete] = useState(false);
+  const [quantities, setQuantities] = useState<Record<string, number>>({ tshirt: 2, shirt: 1 });
+  const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("affordable-laundry-orders");
-    if (!saved) return;
+    const raw = window.localStorage.getItem(savedBookingKey);
+    if (!raw) return;
     try {
-      const parsed = JSON.parse(saved) as Booking[];
-      if (Array.isArray(parsed) && parsed.length) setOrders(parsed);
+      const booking = JSON.parse(raw) as Booking;
+      if (booking.id && booking.items) setLatestBooking(booking);
     } catch {
-      window.localStorage.removeItem("affordable-laundry-orders");
+      window.localStorage.removeItem(savedBookingKey);
     }
   }, []);
 
-  const total = weight * PRICE_PER_KG;
-  const latestOrder = orders.at(-1) ?? baseOrder;
+  const total = useMemo(
+    () => laundryItems.reduce((sum, item) => sum + item.price * (quantities[item.id] ?? 0), 0),
+    [quantities],
+  );
+  const itemCount = Object.values(quantities).reduce((sum, quantity) => sum + quantity, 0);
 
-  const go = (next: Screen) => {
-    setHistory((current) => [...current, screen]);
-    setScreen(next);
+  const changeQuantity = (id: string, amount: number) => {
+    setQuantities((current) => ({ ...current, [id]: Math.max(0, Math.min(20, (current[id] ?? 0) + amount)) }));
   };
 
-  const back = () => {
-    const previous = history.at(-1) ?? "home";
-    setHistory((current) => current.slice(0, -1));
-    setScreen(previous);
+  const openBooking = () => {
+    setBookingComplete(false);
+    setBookingOpen(true);
+    setMenuOpen(false);
   };
 
-  const finishAuth = (event: FormEvent<HTMLFormElement>) => {
+  const submitBooking = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const identity = String(form.get("identity") ?? "").trim();
-    const password = String(form.get("password") ?? "");
-    if (identity.length < 5 || password.length < 6) {
-      toast.error("Enter a valid phone or email and at least 6 password characters.");
+    if (itemCount === 0) {
+      toast.error("Add at least one item to your collection.");
       return;
     }
-    toast.success(authMode === "login" ? "Welcome back!" : "Demo account created.");
-    setHistory([]);
-    setScreen("home");
-  };
-
-  const continueBooking = () => {
-    if (bookingStep === 1 && (!location || !pickupDate || !pickupTime)) {
-      toast.error("Choose your pickup location, date and time.");
-      return;
-    }
-    setBookingStep((current) => Math.min(4, current + 1));
-  };
-
-  const confirmBooking = () => {
-    const order: Booking = {
-      id: `AL${String(orders.length + 2).padStart(4, "0")}`,
-      location,
-      date: pickupDate,
-      time: pickupTime,
-      weight,
-      notes,
-      payment,
-      status: "Booking Confirmed",
+    const data = new FormData(event.currentTarget);
+    const booking: Booking = {
+      id: `AL${Date.now().toString().slice(-5)}`,
+      customer: String(data.get("name") ?? ""),
+      phone: String(data.get("phone") ?? ""),
+      location: String(data.get("location") ?? ""),
+      date: String(data.get("date") ?? ""),
+      items: quantities,
+      total,
+      status: "Collection scheduled",
     };
-    const nextOrders = [...orders, order];
-    setOrders(nextOrders);
-    window.localStorage.setItem("affordable-laundry-orders", JSON.stringify(nextOrders));
-    setBookingStep(4);
-    toast.success("Laundry booking confirmed.");
+    window.localStorage.setItem(savedBookingKey, JSON.stringify(booking));
+    setLatestBooking(booking);
+    setBookingComplete(true);
+    toast.success("Your collection has been scheduled.");
   };
 
-  if (screen === "splash") {
-    return (
-      <AppFrame immersive>
-        <div className="splash-screen">
-          <div className="bubble bubble-one" />
-          <div className="bubble bubble-two" />
-          <div className="relative z-10 flex flex-1 flex-col items-center justify-center text-center">
-            <img className="splash-logo" src={logoAsset.url} alt="Affordable Laundry Service" />
-            <h1 className="mt-6 font-display text-3xl font-extrabold text-primary-foreground">Affordable Laundry</h1>
-            <p className="mt-2 text-sm font-medium text-primary-foreground/80">Clean Clothes • Fresh Start</p>
-          </div>
-          <div className="relative z-10 space-y-3 px-6 pb-8">
-            <Button className="h-13 w-full bg-card text-primary hover:bg-card/90" onClick={() => go("onboarding-1")}>Get Started</Button>
-            <Button variant="ghost" className="w-full text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" onClick={() => go("auth")}>Already have an account? Log in</Button>
-          </div>
-        </div>
-      </AppFrame>
-    );
-  }
-
-  if (screen === "onboarding-1" || screen === "onboarding-2") {
-    const second = screen === "onboarding-2";
-    return (
-      <AppFrame>
-        <div className="flex h-full flex-col bg-card">
-          <div className="flex justify-end p-5">
-            <Button variant="ghost" onClick={() => go("auth")}>Skip</Button>
-          </div>
-          <div className="onboarding-art">
-            {second ? <Truck className="size-24 text-primary" strokeWidth={1.4} /> : <img className="size-40 rounded-full object-cover" src={logoAsset.url} alt="Laundry pickup service" />}
-          </div>
-          <div className="flex flex-1 flex-col px-7 pb-8">
-            <p className="eyebrow">{second ? "Pickup & delivery" : "Easy laundry care"}</p>
-            <h1 className="mt-2 font-display text-3xl font-extrabold leading-tight text-foreground">
-              {second ? "We collect. We clean. We deliver." : "Fresh clothes without the hassle."}
-            </h1>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              {second ? "Free pickup and delivery within KNUST, with a fast 24-hour turnaround." : "Professional washing, drying, ironing and folding at an affordable GH₵13 per kilogram."}
-            </p>
-            <div className="mt-auto flex items-center gap-2 py-6">
-              <span className={second ? "onboarding-dot" : "onboarding-dot onboarding-dot-active"} />
-              <span className={second ? "onboarding-dot onboarding-dot-active" : "onboarding-dot"} />
-            </div>
-            <Button className="h-13 w-full" onClick={() => (second ? go("auth") : go("onboarding-2"))}>{second ? "Get Started" : "Next"}<ChevronRight /></Button>
-          </div>
-        </div>
-      </AppFrame>
-    );
-  }
-
-  if (screen === "auth") {
-    return (
-      <AppFrame>
-        <main className="app-scroll bg-card px-6 pb-8 pt-8">
-          <Brand />
-          <div className="mt-10">
-            <h1 className="font-display text-3xl font-extrabold text-foreground">{authMode === "login" ? "Welcome back" : "Create account"}</h1>
-            <p className="mt-2 text-sm text-muted-foreground">{authMode === "login" ? "Sign in to manage your laundry." : "Start your first laundry booking today."}</p>
-          </div>
-          <div className="segmented-control mt-7">
-            <Button variant="ghost" className={authMode === "login" ? "segment-active" : "segment"} onClick={() => setAuthMode("login")}>Login</Button>
-            <Button variant="ghost" className={authMode === "signup" ? "segment-active" : "segment"} onClick={() => setAuthMode("signup")}>Sign Up</Button>
-          </div>
-          <form className="mt-6 space-y-4" onSubmit={finishAuth}>
-            {authMode === "signup" ? (
-              <label className="field-label">Full name<input name="name" className="app-input" required maxLength={80} placeholder="Your full name" /></label>
-            ) : null}
-            <label className="field-label">Phone number or email<input name="identity" className="app-input" required maxLength={120} placeholder="053 233 1150" /></label>
-            {authMode === "signup" ? (
-              <label className="field-label">Email address<input name="email" type="email" className="app-input" required maxLength={120} placeholder="you@example.com" /></label>
-            ) : null}
-            <label className="field-label relative">Password
-              <input name="password" type={showPassword ? "text" : "password"} className="app-input pr-12" required minLength={6} maxLength={72} placeholder="At least 6 characters" />
-              <Button type="button" variant="ghost" size="icon" className="absolute bottom-1 right-1" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff /> : <Eye />}</Button>
-            </label>
-            {authMode === "login" ? <Button type="button" variant="link" className="ml-auto flex px-0" onClick={() => toast("Demo reset link sent.")}>Forgot password?</Button> : null}
-            <Button type="submit" className="h-13 w-full">{authMode === "login" ? "Login" : "Create Account"}</Button>
-          </form>
-          <Button variant="ghost" className="mt-8 w-full text-xs text-muted-foreground" onClick={() => go("admin")}>Open staff demo</Button>
-        </main>
-      </AppFrame>
-    );
-  }
-
-  const content = (() => {
-    if (screen === "home") return <HomeScreen go={go} latestOrder={latestOrder} />;
-    if (screen === "services") return <ServicesScreen go={go} weight={weight} setWeight={setWeight} />;
-    if (screen === "booking") return <BookingScreen step={bookingStep} setStep={setBookingStep} back={back} weight={weight} setWeight={setWeight} location={location} setLocation={setLocation} pickupDate={pickupDate} setPickupDate={setPickupDate} pickupTime={pickupTime} setPickupTime={setPickupTime} notes={notes} setNotes={setNotes} payment={payment} setPayment={setPayment} total={total} continueBooking={continueBooking} confirmBooking={confirmBooking} go={go} latestOrder={orders.at(-1) ?? baseOrder} />;
-    if (screen === "tracking") return <TrackingScreen order={latestOrder} back={back} />;
-    if (screen === "payments") return <PaymentsScreen payment={payment} setPayment={setPayment} back={back} />;
-    if (screen === "orders") return <OrdersScreen orders={orders} go={go} />;
-    if (screen === "notifications") return <NotificationsScreen read={notificationsRead} setRead={setNotificationsRead} />;
-    if (screen === "profile") return <ProfileScreen go={go} />;
-    return <AdminScreen go={go} orders={orders} setOrders={setOrders} filter={adminFilter} setFilter={setAdminFilter} query={adminQuery} setQuery={setAdminQuery} />;
-  })();
-
   return (
-    <AppFrame>
-      <div className="flex h-full flex-col bg-background">
-        {content}
-        {screen !== "admin" && !["services", "booking", "payments"].includes(screen) ? <BottomNav active={screen} go={go} alerts={notificationsRead ? 0 : 2} activeOrders={orders.filter((order) => order.status !== "Delivered").length} /> : null}
-      </div>
-    </AppFrame>
-  );
-}
-
-function AppFrame({ children, immersive = false }: { children: ReactNode; immersive?: boolean }) {
-  return (
-    <div className="app-stage">
-      <div className={immersive ? "phone-shell phone-shell-immersive" : "phone-shell"}>
-        <div className="desktop-brand"><Brand compact /><p>Mobile frontend demo</p></div>
-        <div className="phone-screen">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function HomeScreen({ go, latestOrder }: { go: (screen: Screen) => void; latestOrder: Booking }) {
-  const [category, setCategory] = useState("Wash & Fold");
-  const categories = [
-    { label: "Wash & Fold", note: "GH₵13/kg", icon: WashingMachine },
-    { label: "Ironing", note: "Crisp", icon: Sparkles },
-    { label: "Express", note: "12 hrs", icon: Clock3 },
-    { label: "Drying", note: "Fabric-safe", icon: Wind },
-    { label: "Folding", note: "Neat", icon: FoldHorizontal },
-  ];
-  const tiles = [
-    { label: "Book", icon: WashingMachine, screen: "booking" as Screen },
-    { label: "Track", icon: Truck, screen: "tracking" as Screen },
-    { label: "Pricing", icon: Shirt, screen: "services" as Screen },
-    { label: "Orders", icon: PackageCheck, screen: "orders" as Screen },
-    { label: "Payment", icon: CircleDollarSign, screen: "payments" as Screen },
-    { label: "Support", icon: Phone, screen: "profile" as Screen },
-  ];
-  return (
-    <div className="app-scroll has-dock px-5 pt-7">
-      <header className="flex items-start justify-between">
-        <div>
-          <p className="hero-greeting">Good morning,</p>
-          <h1 className="hero-title">Bernard</h1>
-          <span className="hero-place"><MapPin />KNUST Campus · Republic Hall</span>
-        </div>
-        <Button variant="outline" size="icon" className="mt-1 rounded-full" onClick={() => go("notifications")} aria-label="Notifications"><Bell /></Button>
+    <div className="site-shell">
+      <header className="site-header">
+        <a className="site-brand" href="#top" aria-label="Affordable Laundry home">
+          <img src={logoAsset.url} alt="" />
+          <span><strong>Affordable Laundry</strong><small>Garment care · Kumasi</small></span>
+        </a>
+        <nav className={menuOpen ? "site-nav site-nav-open" : "site-nav"} aria-label="Main navigation">
+          {navigationItems.map(({ label, id }) => (
+            <Button key={id} variant="ghost" onClick={() => { scrollToSection(id); setMenuOpen(false); }}>{label}</Button>
+          ))}
+          <Button className="nav-book" onClick={openBooking}>Book a collection<ArrowRight /></Button>
+        </nav>
+        <Button variant="ghost" size="icon" className="menu-trigger" onClick={() => setMenuOpen((value) => !value)} aria-label={menuOpen ? "Close menu" : "Open menu"}>
+          {menuOpen ? <X /> : <Menu />}
+        </Button>
       </header>
 
-      <h2 className="section-title mt-7">Active order</h2>
-      <Button variant="outline" className="active-order mt-2" onClick={() => go("tracking")}>
-        <div className="active-order-top">
-          <div>
-            <span className="status-badge">{latestOrder.status}</span>
-            <h3 className="mt-2">Order #{latestOrder.id}</h3>
-            <small>{latestOrder.weight} kg · GH₵{latestOrder.weight * PRICE_PER_KG}.00 · {latestOrder.payment}</small>
+      <main>
+        <section id="top" className="atelier-hero">
+          <div className="hero-copy reveal-up">
+            <div className="hero-kicker"><span />Artisan laundry & garment care</div>
+            <h1>Redefining <em>wardrobe</em> care.</h1>
+            <div className="hero-intro">
+              <p>Your clothes, collected, expertly cleaned and returned beautifully finished—without disrupting your day.</p>
+              <div>
+                <Button className="hero-cta" onClick={openBooking}>Book a collection<ArrowRight /></Button>
+                <small>24-hour turnaround available</small>
+              </div>
+            </div>
+            <div className="hero-proof">
+              <span><strong>24hr</strong> turnaround</span>
+              <span><strong>Free</strong> KNUST pickup</span>
+              <span><strong>GHC 4</strong> T-shirts</span>
+            </div>
           </div>
-          <span className="pill-cta">Track live<ChevronRight /></span>
-        </div>
-        <div className="progress-track"><span /></div>
-        <div className="flex w-full justify-between text-[10px] font-medium text-muted-foreground"><span>Picked up</span><span>Ready in 24 hours</span></div>
-      </Button>
 
-      <h2 className="section-title mt-7">Choose a service</h2>
-      <div className="chip-rail mt-3">
-        {categories.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Button key={item.label} variant="ghost" className={category === item.label ? "chip chip-active" : "chip"} onClick={() => { setCategory(item.label); toast(`${item.label} selected · ${item.note}`); }}>
-              <span className="chip-ring"><Icon /></span>
-              <small>{item.label}</small>
-              <em>{item.note}</em>
-            </Button>
-          );
-        })}
-      </div>
-
-      <section className="promo-banner mt-7">
-        <div className="relative z-10 max-w-[62%]">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">24-hour care</p>
-          <h2 className="mt-2 font-display text-2xl font-extrabold leading-tight text-primary-foreground">Laundry from GH₵13/kg</h2>
-          <Button className="mt-5 bg-card text-primary hover:bg-card/90" onClick={() => go("booking")}>Book Laundry</Button>
-        </div>
-        <WashingMachine className="absolute -bottom-3 -right-2 size-32 text-primary-foreground/20" strokeWidth={1.2} />
-      </section>
-
-      <h2 className="section-title mt-7">Quick actions</h2>
-      <div className="tile-grid mt-3">
-        {tiles.map((tile) => {
-          const Icon = tile.icon;
-          return <Button key={tile.label} variant="ghost" className="tile" onClick={() => go(tile.screen)}><Icon /><span>{tile.label}</span></Button>;
-        })}
-      </div>
-    </div>
-  );
-}
-
-
-function ServicesScreen({ go, weight, setWeight }: { go: (screen: Screen) => void; weight: number; setWeight: (value: number) => void }) {
-  const services = [
-    ["Washing", "Fresh, hygienic garment care", WashingMachine],
-    ["Drying", "Quick and fabric-safe", Wind],
-    ["Ironing", "Crisp and wrinkle-free", Sparkles],
-    ["Folding", "Neatly packed for you", FoldHorizontal],
-  ] as const;
-  return (
-    <><AppHeader title={screenTitles.services ?? "Services"} onBack={() => go("home")} />
-      <main className="app-scroll p-5">
-        <div className="price-strip"><div><p className="text-xs text-primary-foreground/70">Simple pricing</p><strong>GH₵13 <small>/ kilogram</small></strong></div><Clock3 /><span>24hr</span></div>
-        <p className="mt-3 text-xs leading-5 text-muted-foreground">Free pickup and delivery within KNUST. Delivery outside KNUST is confirmed based on location.</p>
-        <h2 className="section-title mt-6">What we do</h2>
-        <div className="mt-3 space-y-3">{services.map(([name, copy, Icon]) => <div className="service-row" key={name}><IconTile><Icon /></IconTile><div><h3>{name}</h3><p>{copy}</p></div><Check className="ml-auto size-4 text-success" /></div>)}</div>
-        <div className="calculator mt-6"><div className="flex items-center justify-between"><div><p className="eyebrow">Price calculator</p><h2 className="section-title mt-1">Estimated weight</h2></div><CircleDollarSign className="size-8 text-primary" /></div><div className="mt-5 flex items-center justify-between"><WeightStepper value={weight} setValue={setWeight} /><div className="text-right"><p className="text-xs text-muted-foreground">Estimated cost</p><strong className="font-display text-2xl text-success">GH₵{weight * PRICE_PER_KG}.00</strong></div></div></div>
-        <Button className="mt-6 h-13 w-full" onClick={() => go("booking")}>Book Laundry</Button>
-      </main>
-    </>
-  );
-}
-
-function WeightStepper({ value, setValue }: { value: number; setValue: (value: number) => void }) {
-  return <div className="weight-stepper"><Button variant="ghost" size="icon" onClick={() => setValue(Math.max(1, value - 1))} aria-label="Decrease weight"><Minus /></Button><span>{value} <small>kg</small></span><Button variant="ghost" size="icon" onClick={() => setValue(Math.min(30, value + 1))} aria-label="Increase weight"><Plus /></Button></div>;
-}
-
-type BookingProps = {
-  step: number; setStep: (value: number) => void; back: () => void; weight: number; setWeight: (value: number) => void;
-  location: string; setLocation: (value: string) => void; pickupDate: string; setPickupDate: (value: string) => void;
-  pickupTime: string; setPickupTime: (value: string) => void; notes: string; setNotes: (value: string) => void;
-  payment: string; setPayment: (value: string) => void; total: number; continueBooking: () => void; confirmBooking: () => void;
-  go: (screen: Screen) => void; latestOrder: Booking;
-};
-
-function BookingScreen(props: BookingProps) {
-  const { step, setStep, back, weight, setWeight, location, setLocation, pickupDate, setPickupDate, pickupTime, setPickupTime, notes, setNotes, payment, setPayment, total, continueBooking, confirmBooking, go, latestOrder } = props;
-  return (
-    <><AppHeader title={step === 4 ? "Booking confirmed" : `Book laundry · ${step} of 3`} onBack={step > 1 && step < 4 ? () => setStep(step - 1) : back} />
-      <main className="app-scroll p-5">
-        {step < 4 ? <div className="booking-progress"><span style={{ width: `${step * 33.333}%` }} /></div> : null}
-        {step === 1 ? <div className="booking-panel"><p className="eyebrow">Pickup details</p><h2>When should we collect?</h2><label className="field-label input-wrap mt-6">Pickup location<select className="app-input pr-11" value={location} onChange={(event) => setLocation(event.target.value)}><option value="">Select your area or hostel</option><option>KNUST, Republic Hall</option><option>KNUST, Unity Hall</option><option>Gyinyase</option><option>Outside KNUST</option></select>{location ? <span className="valid-check"><Check /></span> : null}</label>{location === "Outside KNUST" ? <p className="info-note">Delivery fee to be confirmed based on your location.</p> : null}<label className="field-label input-wrap">Preferred date<input className="app-input pr-11" type="date" value={pickupDate} onChange={(event) => setPickupDate(event.target.value)} />{pickupDate ? <span className="valid-check"><Check /></span> : null}</label><label className="field-label input-wrap">Preferred time<select className="app-input pr-11" value={pickupTime} onChange={(event) => setPickupTime(event.target.value)}><option value="">Select a time</option><option>8:00 AM – 10:00 AM</option><option>10:00 AM – 12:00 PM</option><option>2:00 PM – 4:00 PM</option><option>4:00 PM – 6:00 PM</option></select>{pickupTime ? <span className="valid-check"><Check /></span> : null}</label><Button className="mt-6 h-13 w-full" onClick={continueBooking}>Continue</Button></div> : null}
-        {step === 2 ? <div className="booking-panel"><p className="eyebrow">Laundry details</p><h2>Tell us about your load</h2><div className="calculator mt-6"><p className="field-label">Estimated weight</p><div className="mt-2 flex items-center justify-between"><WeightStepper value={weight} setValue={setWeight} /><strong className="font-display text-2xl text-success">GH₵{total}.00</strong></div></div><label className="field-label mt-5">Special instructions<textarea className="app-input min-h-24 resize-none" maxLength={300} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Delicate items, stains, fabric notes…" /></label><p className="info-note">Final weight and price will be confirmed at pickup.</p><Button className="mt-6 h-13 w-full" onClick={continueBooking}>Review booking</Button></div> : null}
-        {step === 3 ? <div className="booking-panel"><p className="eyebrow">Review & payment</p><h2>Confirm your booking</h2><Summary order={{ ...baseOrder, location, date: pickupDate, time: pickupTime, weight, notes, payment }} /><p className="field-label mt-5">Payment method</p><PaymentChoices value={payment} setValue={setPayment} /><div className="mt-5 flex gap-3"><Button variant="outline" className="h-12 flex-1" onClick={() => setStep(1)}>Edit details</Button><Button className="h-12 flex-[1.4]" onClick={confirmBooking}>Confirm booking</Button></div></div> : null}
-        {step === 4 ? <div className="confirmation"><div className="confirmation-icon"><Check /></div><p className="eyebrow mt-5">You’re all set</p><h2>Laundry booked!</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">We’ll collect your laundry at the selected time and confirm the final weight.</p><div className="mt-6 w-full"><Summary order={latestOrder} /></div><Button className="mt-6 h-13 w-full" onClick={() => go("tracking")}>Track Order</Button><Button variant="ghost" className="mt-2 w-full" onClick={() => { setStep(1); go("home"); }}>Back to Home</Button></div> : null}
-      </main>
-    </>
-  );
-}
-
-function Summary({ order }: { order: Booking }) {
-  return <div className="summary-box mt-5"><div><span>Pickup</span><strong>{order.location || "Not selected"}</strong></div><div><span>Date & time</span><strong>{order.date || "—"} · {order.time || "—"}</strong></div><div><span>Estimated weight</span><strong>{order.weight} kg</strong></div><div><span>Estimated laundry cost</span><strong>GH₵{order.weight * PRICE_PER_KG}.00</strong></div></div>;
-}
-
-function PaymentChoices({ value, setValue }: { value: string; setValue: (value: string) => void }) {
-  return <div className="space-y-2">{["Cash on Delivery", "MTN MoMo", "Telecel Cash"].map((method) => <Button key={method} variant="outline" className={value === method ? "payment-choice payment-choice-active" : "payment-choice"} onClick={() => setValue(method)}><CircleDollarSign /><span>{method}</span>{value === method ? <Check className="ml-auto" /> : null}</Button>)}</div>;
-}
-
-function TrackingScreen({ order, back }: { order: Booking; back: () => void }) {
-  const statuses = ["Booking Confirmed", "Picked Up", "Processing", "Ready for Delivery", "Delivered"];
-  return <><AppHeader title="Track order" onBack={back} /><main className="app-scroll has-dock p-5"><div className="flex items-start justify-between"><div><p className="eyebrow">Order #{order.id}</p><h2 className="mt-1 font-display text-xl font-extrabold text-foreground">On the way to fresh</h2></div><span className="status-badge">{order.status}</span></div><div className="eta-card mt-5"><Clock3 /><div><strong>Estimated completion</strong><p>Within 24 hours of pickup</p></div></div><div className="timeline mt-7">{statuses.map((status, index) => <div className={index < 2 ? "timeline-item timeline-done" : index === 2 ? "timeline-item timeline-current" : "timeline-item"} key={status}><span className="timeline-dot">{index < 2 ? <Check /> : null}</span><div><strong>{status}</strong><p>{index === 0 ? "27 Sep · 6:42 PM" : index === 1 ? "28 Sep · 10:14 AM" : index === 2 ? "In progress" : "Pending"}</p></div></div>)}</div><Summary order={order} /><div className="mt-5 grid grid-cols-2 gap-3"><Button variant="outline" onClick={() => toast("Order details are up to date.")}>Order details</Button><Button onClick={() => window.location.assign("tel:0532331150")}><Phone />Support</Button></div></main></>;
-}
-
-function PaymentsScreen({ payment, setPayment, back }: { payment: string; setPayment: (value: string) => void; back: () => void }) {
-  return <><AppHeader title="Payment method" onBack={back} /><main className="app-scroll p-5"><div className="demo-notice"><Sparkles /><p><strong>Frontend demonstration</strong><br />No real payment details are collected or processed.</p></div><h2 className="section-title mt-6">Choose how to pay</h2><div className="mt-3"><PaymentChoices value={payment} setValue={setPayment} /></div><div className="summary-box mt-6"><div><span>Selected method</span><strong>{payment}</strong></div><div><span>When you pay</span><strong>{payment === "Cash on Delivery" ? "When your laundry arrives" : "After final weight confirmation"}</strong></div></div><Button className="mt-6 h-13 w-full" onClick={() => toast.success(`${payment} selected for this demo.`)}>Confirm Demo Method</Button></main></>;
-}
-
-function OrdersScreen({ orders, go }: { orders: Booking[]; go: (screen: Screen) => void }) {
-  return <><AppHeader title="My orders" action={<Button variant="ghost" size="icon" onClick={() => go("booking")} aria-label="New booking"><Plus /></Button>} /><main className="app-scroll has-dock p-5">{orders.length ? <div className="space-y-3">{[...orders].reverse().map((order) => <Button variant="outline" className="order-list-row" key={order.id} onClick={() => go("tracking")}><IconTile><Shirt /></IconTile><div className="min-w-0 flex-1 text-left"><div className="flex items-center justify-between"><strong>#{order.id}</strong><span className="status-badge">{order.status}</span></div><p>{order.date} · {order.weight} kg · GH₵{order.weight * PRICE_PER_KG}.00</p></div><ChevronRight /></Button>)}</div> : <div className="empty-state"><Shirt /><h2>No orders yet</h2><p>Your first fresh load is only a few taps away.</p><Button onClick={() => go("booking")}>Book Laundry</Button></div>}</main></>;
-}
-
-function NotificationsScreen({ read, setRead }: { read: boolean; setRead: (value: boolean) => void }) {
-  const notices = [
-    ["Order confirmed", "Your order #AL0001 has been confirmed.", "Just now", PackageCheck],
-    ["Pickup complete", "Your laundry is heading to our care team.", "2h ago", Truck],
-    ["Payment update", "Cash on Delivery is selected for your order.", "Yesterday", CircleDollarSign],
-    ["Welcome!", "Thanks for choosing Affordable Laundry Service.", "2d ago", Sparkles],
-  ] as const;
-  return <><AppHeader title="Notifications" action={<Button variant="link" className="px-0 text-xs" onClick={() => setRead(true)}>Mark all read</Button>} /><main className="app-scroll has-dock p-5"><div className="space-y-3">{notices.map(([title, copy, time, Icon], index) => <div className="notification-row" key={title}><IconTile><Icon /></IconTile><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><strong>{title}</strong><span>{time}</span></div><p>{copy}</p></div>{!read && index < 2 ? <i /> : null}</div>)}</div></main></>;
-}
-
-function ProfileScreen({ go }: { go: (screen: Screen) => void }) {
-  const [confirmLogout, setConfirmLogout] = useState(false);
-  const account = [
-    ["Profile details", UserRound, "Bernard Atsu", () => toast.success("Profile details saved.")],
-    ["Phone number", Phone, "+233 53 233 1150", () => toast("Demo number kept on this device.")],
-    ["Saved address", MapPin, "Republic Hall", () => toast("Republic Hall is your saved address.")],
-  ] as const;
-  const preferences = [
-    ["My orders", PackageCheck, "", () => go("orders")],
-    ["Payment preferences", CircleDollarSign, "Cash", () => go("payments")],
-    ["Notifications", Bell, "On", () => go("notifications")],
-    ["Settings", Settings, "", () => toast("Demo preferences saved on this device.")],
-  ] as const;
-  const faqs = [
-    ["When is pickup free?", "Pickup and delivery are free anywhere inside KNUST campus.", Truck],
-    ["How does GH₵13/kg work?", "You pay per kilogram; final weight is confirmed at pickup.", CircleDollarSign],
-    ["How fast is it?", "Most loads are washed, ironed and back within 24 hours.", Clock3],
-  ] as const;
-  return (
-    <>
-      <AppHeader title="Profile" />
-      <main className="app-scroll has-dock p-5">
-        <div className="profile-card"><div className="avatar-lg">BA</div><div><h2>Bernard Atsu</h2><p>+233 53 233 1150</p><Button variant="link" className="h-auto px-0 py-1" onClick={() => toast.success("Profile details saved.")}>Edit profile</Button></div></div>
-
-        <p className="group-label">Account</p>
-        <div className="group-card">
-          {account.map(([label, Icon, value, action]) => <Button variant="ghost" className="group-row" key={label} onClick={action}><Icon /><span>{label}</span><em>{value}</em><ChevronRight className="size-4 text-muted-foreground" /></Button>)}
-        </div>
-
-        <p className="group-label">Preferences</p>
-        <div className="group-card">
-          {preferences.map(([label, Icon, value, action]) => <Button variant="ghost" className="group-row" key={label} onClick={action}><Icon /><span>{label}</span><em>{value}</em><ChevronRight className="size-4 text-muted-foreground" /></Button>)}
-        </div>
-
-        <h2 className="mt-8 font-display text-xl font-extrabold leading-tight text-foreground">How can we help you today?</h2>
-        <p className="mt-1 text-xs text-muted-foreground">Frequently asked questions</p>
-        <div className="faq-rail mt-3">
-          {faqs.map(([question, answer, Icon]) => <Button variant="ghost" className="faq-card" key={question} onClick={() => toast(answer)}><Icon /><strong>{question}</strong><p>{answer}</p></Button>)}
-        </div>
-
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <Button variant="outline" className="h-12" onClick={() => window.location.assign("tel:0532331150")}><Phone />Call us</Button>
-          <Button variant="outline" className="h-12" onClick={() => toast("Help centre demo opened.")}><HelpCircle />Help centre</Button>
-        </div>
-
-        <div className="contact-panel mt-6"><MapPin /><p>Gyinyase, opposite KNUST Business School, Kumasi</p><Phone /><p>0532331150 / 0243140855</p></div>
-
-        <p className="group-label">Session</p>
-        <div className="group-card">
-          <Button variant="ghost" className="group-row" onClick={() => go("admin")}><UsersRound /><span>Switch to staff demo</span><ChevronRight className="ml-auto size-4 text-muted-foreground" /></Button>
-          <Button variant="ghost" className="group-row group-row-danger" onClick={() => setConfirmLogout(true)}><LogOut /><span>Log out of demo</span></Button>
-        </div>
-      </main>
-      {confirmLogout ? (
-        <div className="sheet-overlay" onClick={() => setConfirmLogout(false)}>
-          <div className="sheet" onClick={(event) => event.stopPropagation()}>
-            <div className="sheet-handle" />
-            <div className="sheet-icon"><LogOut /></div>
-            <h2>Log out of the demo?</h2>
-            <p>You will return to the sign-in screen. Your saved demo bookings stay on this device.</p>
-            <Button className="mt-5 h-13 w-full bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { setConfirmLogout(false); go("auth"); }}>Log out</Button>
-            <Button variant="ghost" className="mt-2 h-12 w-full" onClick={() => setConfirmLogout(false)}>Stay signed in</Button>
+          <div className="hero-visual reveal-late">
+            <div className="hero-image-wrap">
+              <img src={heroImage} width={1536} height={1024} alt="Garment-care specialist inspecting freshly cleaned shirts" />
+            </div>
+            <div className="floating-status">
+              <div className="status-heading"><span><i />Live status</span><PackageCheck /></div>
+              <strong>{latestBooking ? `Order #${latestBooking.id}` : "Next collection"}</strong>
+              <p>{latestBooking ? latestBooking.status : "Slots available today"}</p>
+              <div className="status-line"><span /></div>
+              <small><Check /> Item-based pricing. No weight estimates.</small>
+            </div>
           </div>
+          <div className="scroll-note"><span />Scroll to discover</div>
+        </section>
+
+        <div className="service-marquee" aria-hidden="true">
+          <div>WASHED WITH CARE <span>✦</span> PRESSED WITH PRECISION <span>✦</span> DELIVERED ON TIME <span>✦</span> WASHED WITH CARE <span>✦</span> PRESSED WITH PRECISION <span>✦</span> DELIVERED ON TIME</div>
+        </div>
+
+        <section id="services" className="services-section section-pad">
+          <div className="section-heading">
+            <p className="section-kicker">Care, from door to wardrobe</p>
+            <h2>Every piece receives the <em>right</em> attention.</h2>
+            <p>Simple service, thoughtful handling and a polished finish for the clothes you live in.</p>
+          </div>
+          <div className="service-grid">
+            {services.map(({ number, title, copy, icon: Icon }) => (
+              <article className="service-feature" key={title}>
+                <div className="feature-top"><span>{number}</span><Icon /></div>
+                <h3>{title}</h3><p>{copy}</p>
+                <Button variant="ghost" onClick={openBooking} aria-label={`Book ${title}`}>Explore service<ArrowRight /></Button>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="pricing" className="pricing-section section-pad">
+          <div className="pricing-intro">
+            <p className="section-kicker">Transparent item pricing</p>
+            <h2>Know the price <em>before</em> we arrive.</h2>
+            <p>No weighing. No confusing estimates. Select each garment and see your collection total instantly.</p>
+            <div className="pricing-callout"><Shirt /><span>Everyday essential</span><strong>T-shirt · GHC 4</strong></div>
+          </div>
+          <div className="price-list">
+            {laundryItems.map((item) => (
+              <div className="price-row" key={item.id}>
+                <div><strong>{item.name}</strong><small>{item.note}</small></div>
+                <span>GHC {item.price}</span>
+                <div className="quantity-control" aria-label={`${item.name} quantity`}>
+                  <Button variant="ghost" size="icon" onClick={() => changeQuantity(item.id, -1)} aria-label={`Remove one ${item.name}`}><Minus /></Button>
+                  <output>{quantities[item.id] ?? 0}</output>
+                  <Button variant="ghost" size="icon" onClick={() => changeQuantity(item.id, 1)} aria-label={`Add one ${item.name}`}><Plus /></Button>
+                </div>
+              </div>
+            ))}
+            <div className="price-total">
+              <div><span>Your collection</span><small>{itemCount} {itemCount === 1 ? "item" : "items"} selected</small></div>
+              <strong>GHC {total}</strong>
+              <Button onClick={openBooking}>Continue to book<ArrowRight /></Button>
+            </div>
+          </div>
+        </section>
+
+        <section id="process" className="process-section section-pad">
+          <div className="process-heading"><p className="section-kicker">A refreshingly simple routine</p><h2>From your door, <em>back to you.</em></h2></div>
+          <div className="process-steps">
+            {[
+              ["01", "Choose your items", "Build your collection with clear prices for every garment."],
+              ["02", "We collect", "Pick a convenient time and we come to you within KNUST."],
+              ["03", "We return it fresh", "Your clothes come back clean, pressed and neatly packed."],
+            ].map(([number, title, copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}
+          </div>
+        </section>
+
+        <section className="testimonial-section section-pad">
+          <blockquote>“They make laundry feel less like a chore and more like a wardrobe reset.”</blockquote>
+          <div><span>BA</span><p><strong>Bernard A.</strong><small>KNUST, Kumasi</small></p></div>
+        </section>
+
+        <section id="contact" className="contact-section section-pad">
+          <div><p className="section-kicker">Ready when you are</p><h2>Let’s make laundry your <em>easiest</em> task.</h2></div>
+          <Button className="contact-cta" onClick={openBooking}>Schedule your collection<ArrowRight /></Button>
+          <div className="contact-details">
+            <p><MapPin />Gyinyase, opposite KNUST Business School, Kumasi</p>
+            <p><Phone />0532331150 · 0243140855</p>
+            <p><Clock3 />24-hour turnaround available</p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="site-footer">
+        <a className="site-brand footer-brand" href="#top"><img src={logoAsset.url} alt="" /><span><strong>Affordable Laundry</strong><small>Clean clothes · Fresh start</small></span></a>
+        <p>Premium garment care and pickup around KNUST, Kumasi.</p>
+        <Button variant="ghost" size="icon" onClick={() => toast("Instagram page demo opened.")} aria-label="Instagram"><Instagram /></Button>
+        <small>© 2026 Affordable Laundry Service</small>
+      </footer>
+
+      {bookingOpen ? (
+        <div className="booking-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setBookingOpen(false); }}>
+          <aside className="booking-drawer" role="dialog" aria-modal="true" aria-label="Book a laundry collection">
+            <div className="drawer-header">
+              <div><p className="section-kicker">Your collection</p><h2>{bookingComplete ? "Booking confirmed" : "Book garment care"}</h2></div>
+              <Button variant="ghost" size="icon" onClick={() => setBookingOpen(false)} aria-label="Close booking"><X /></Button>
+            </div>
+            {bookingComplete && latestBooking ? (
+              <div className="booking-success">
+                <span><Check /></span><h3>You’re all set.</h3>
+                <p>Collection <strong>#{latestBooking.id}</strong> is scheduled for {latestBooking.date}. We’ll call before pickup.</p>
+                <div><small>Collection total</small><strong>GHC {latestBooking.total}</strong></div>
+                <Button onClick={() => setBookingOpen(false)}>Done</Button>
+              </div>
+            ) : (
+              <form className="booking-form" onSubmit={submitBooking}>
+                <div className="booking-summary">
+                  <span>{itemCount} {itemCount === 1 ? "item" : "items"}</span><strong>GHC {total}</strong>
+                  <Button type="button" variant="ghost" onClick={() => { setBookingOpen(false); scrollToSection("pricing"); }}>Edit items<ChevronDown /></Button>
+                </div>
+                <label>Full name<input name="name" required maxLength={80} placeholder="Your name" /></label>
+                <label>Phone number<input name="phone" required inputMode="tel" minLength={9} maxLength={18} placeholder="053 233 1150" /></label>
+                <label>Pickup location<select name="location" required defaultValue=""><option value="" disabled>Select your area</option><option>KNUST campus</option><option>Gyinyase</option><option>Ayeduase</option><option>Outside KNUST</option></select></label>
+                <label>Pickup date<input name="date" type="date" required /></label>
+                <p className="booking-note"><Check />Free pickup and delivery within KNUST. We confirm fees for other locations before collection.</p>
+                <Button type="submit" className="drawer-submit">Confirm collection · GHC {total}<ArrowRight /></Button>
+                <small className="demo-copy">Frontend demonstration only. No payment is collected.</small>
+              </form>
+            )}
+          </aside>
         </div>
       ) : null}
-    </>
+    </div>
   );
-}
-
-
-function AdminScreen({ go, orders, setOrders, filter, setFilter, query, setQuery }: { go: (screen: Screen) => void; orders: Booking[]; setOrders: (orders: Booking[]) => void; filter: string; setFilter: (value: string) => void; query: string; setQuery: (value: string) => void }) {
-  const allOrders = useMemo(() => orders.length > 1 ? orders : [baseOrder, { ...baseOrder, id: "AL0002", status: "Processing", location: "KNUST, Unity Hall", weight: 5 }, { ...baseOrder, id: "AL0003", status: "Delivered", location: "Gyinyase", weight: 2 }], [orders]);
-  const visible = allOrders.filter((order) => (filter === "All" || order.status === filter) && (order.id.toLowerCase().includes(query.toLowerCase()) || order.location.toLowerCase().includes(query.toLowerCase())));
-  const updateStatus = (id: string) => {
-    const next = allOrders.map((order) => order.id === id ? { ...order, status: order.status === "Delivered" ? "Delivered" : "Processing" } : order);
-    setOrders(next);
-    window.localStorage.setItem("affordable-laundry-orders", JSON.stringify(next));
-    toast.success(`Order #${id} updated.`);
-  };
-  return <div className="flex h-full flex-col bg-background"><header className="admin-header"><div className="flex items-center justify-between"><div><p className="text-xs text-primary-foreground/70">Staff workspace</p><h1 className="font-display text-xl font-extrabold text-primary-foreground">Operations overview</h1></div><div className="avatar-sm">AB</div></div><div className="admin-stats"><div><strong>{allOrders.length}</strong><span>Total orders</span></div><div><strong>{allOrders.filter((order) => order.status !== "Delivered").length}</strong><span>In progress</span></div><div><strong>{allOrders.filter((order) => order.status === "Delivered").length}</strong><span>Completed</span></div></div></header><main className="app-scroll p-5"><div className="flex items-center justify-between"><h2 className="section-title">Manage orders</h2><Button variant="ghost" size="icon" onClick={() => toast("Services: GH₵13/kg · 24-hour turnaround") } aria-label="Service settings"><Settings /></Button></div><label className="search-field mt-3"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search order or location" /></label><div className="filter-tabs mt-3">{["All", "Processing", "Delivered"].map((item) => <Button variant="ghost" className={filter === item ? "filter-active" : ""} key={item} onClick={() => setFilter(item)}>{item}</Button>)}</div><div className="mt-4 space-y-3">{visible.map((order) => <div className="admin-order" key={order.id}><div className="flex items-start justify-between"><div><strong>#{order.id}</strong><p>{order.location}</p></div><span className="status-badge">{order.status}</span></div><div className="mt-3 flex items-center justify-between text-xs"><span>{order.weight} kg · GH₵{order.weight * PRICE_PER_KG}.00</span><Button variant="outline" size="sm" onClick={() => updateStatus(order.id)}>{order.status === "Delivered" ? "Completed" : "Update status"}</Button></div></div>)}</div><div className="admin-tools mt-6"><Button variant="outline" onClick={() => toast("Customer list: 18 demo customers.")}><UsersRound />Customers</Button><Button variant="outline" onClick={() => toast("Services & pricing demo opened.")}><ListFilter />Services</Button><Button variant="outline" onClick={() => toast("Delivery area settings opened.")}><LocateFixed />Delivery</Button><Button variant="outline" onClick={() => toast("Business hours: 7 AM – 7 PM.")}><Clock3 />Settings</Button></div></main><div className="border-t border-border bg-card p-3"><Button variant="ghost" className="w-full" onClick={() => go("home")}><ArrowLeft />Return to customer app</Button></div></div>;
 }
