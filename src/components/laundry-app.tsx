@@ -59,6 +59,12 @@ const services = [
 ];
 
 const savedBookingKey = "affordable-laundry-website-booking";
+const navigationItems = [
+  { label: "Services", id: "services" },
+  { label: "Pricing", id: "pricing" },
+  { label: "How it works", id: "process" },
+  { label: "Contact", id: "contact" },
+];
 
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -129,7 +135,7 @@ export function LaundryApp() {
           <span><strong>Affordable Laundry</strong><small>Garment care · Kumasi</small></span>
         </a>
         <nav className={menuOpen ? "site-nav site-nav-open" : "site-nav"} aria-label="Main navigation">
-          {[["Services", "services"], ["Pricing", "pricing"], ["How it works", "process"], ["Contact", "contact"]].map(([label, id]) => (
+          {navigationItems.map(({ label, id }) => (
             <Button key={id} variant="ghost" onClick={() => { scrollToSection(id); setMenuOpen(false); }}>{label}</Button>
           ))}
           <Button className="nav-book" onClick={openBooking}>Book a collection<ArrowRight /></Button>
