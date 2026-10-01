@@ -1,0 +1,5 @@
+{
+  "name": "Affordable Laundry",
+  "description": "Book premium laundry pickup and delivery around KNUST, Kumasi, with simple per-item garment pricing.",
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
