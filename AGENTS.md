@@ -9,4 +9,4 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Keep the product as a single mobile-first frontend prototype with local state/storage only, because backend services are explicitly out of scope.
+- Keep the product as a single responsive marketing-and-booking website using local state/storage only, because backend services are explicitly out of scope.

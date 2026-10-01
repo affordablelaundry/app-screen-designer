@@ -4,10 +4,10 @@ import { LaundryApp } from "@/components/laundry-app";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Affordable Laundry Service — Mobile App" },
-      { name: "description", content: "Book, price and track affordable laundry pickup and delivery around KNUST, Kumasi." },
-      { property: "og:title", content: "Affordable Laundry Service — Mobile App" },
-      { property: "og:description", content: "A mobile laundry booking experience with GH₵13/kg pricing and pickup around KNUST." },
+      { title: "Affordable Laundry — Premium Garment Care in Kumasi" },
+      { name: "description", content: "Book premium laundry pickup and delivery around KNUST, Kumasi, with simple per-item garment pricing." },
+      { property: "og:title", content: "Affordable Laundry — Premium Garment Care in Kumasi" },
+      { property: "og:description", content: "Expert garment care, transparent item pricing and convenient collection around KNUST." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
