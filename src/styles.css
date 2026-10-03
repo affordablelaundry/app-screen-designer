@@ -46,17 +46,17 @@
   --secondary-foreground: oklch(0.3 0.075 232);
   --muted: oklch(0.96 0.012 225);
   --muted-foreground: oklch(0.53 0.035 230);
-  --accent: oklch(0.855 0.16 89);
-  --accent-foreground: oklch(0.28 0.055 232);
+  --accent: #0284c7;
+  --accent-foreground: oklch(0.98 0 0);
   --destructive: oklch(0.58 0.22 27);
   --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.89 0.018 225);
   --input: oklch(0.89 0.018 225);
   --ring: oklch(0.64 0.16 226);
   --deep-blue: oklch(0.38 0.12 232);
-  --sky: oklch(0.67 0.15 225);
+  --sky: #38bdf8;
   --paper: oklch(0.975 0.008 225);
-  --gold: oklch(0.855 0.16 89);
+  --gold: #38bdf8;
   --shadow-soft: 0 24px 70px -36px color-mix(in oklab, var(--foreground) 36%, transparent);
 }
 
@@ -1521,4 +1521,67 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* Premium Glassmorphic utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+}
+
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes waveFlow {
+  0% {
+    transform: scaleY(1) translateX(0);
+  }
+  50% {
+    transform: scaleY(1.08) translateX(-12px);
+  }
+  100% {
+    transform: scaleY(1) translateX(0);
+  }
+}
+
+.animate-wave {
+  animation: waveFlow 7s ease-in-out infinite;
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-infinite {
+  display: inline-flex;
+  width: max-content;
+  animation: marqueeScroll 20s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-infinite:hover {
+  animation-play-state: paused;
 }

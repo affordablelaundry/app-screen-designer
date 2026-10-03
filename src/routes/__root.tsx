@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/context/auth-context";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -80,12 +81,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Affordable Laundry Service" },
-      { name: "description", content: "Mobile laundry booking and tracking in Kumasi." },
+      { title: "Affordable Laundry Service · KNUST Kumasi" },
+      {
+        name: "description",
+        content:
+          "Clean clothes, delivered fresh to your door. Free collection and return across KNUST halls, hostels and Kumasi.",
+      },
       { name: "author", content: "Affordable Laundry Service" },
+      { name: "theme-color", content: "#0284c7" },
       { property: "og:type", content: "website" },
+      { property: "og:title", content: "Affordable Laundry Service · KNUST Kumasi" },
+      {
+        property: "og:description",
+        content:
+          "Clean clothes, delivered fresh to your door. Simple item pricing, free campus pickup and fast delivery.",
+      },
+      { property: "og:image", content: "/og-image.jpg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Affordable Laundry Service · KNUST Kumasi" },
+      {
+        name: "twitter:description",
+        content:
+          "Clean clothes, delivered fresh to your door. Simple item pricing with free campus pickup.",
+      },
+      { name: "twitter:image", content: "/og-image.jpg" },
     ],
     links: [
       {
@@ -98,7 +119,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Work+Sans:wght@400;500;600;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "manifest", href: "/manifest.json" },
+      { rel: "icon", href: "/favicon.jpg", type: "image/jpeg" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -126,9 +149,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      <Toaster position="top-center" richColors />
+      <AuthProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        <Toaster position="top-center" richColors />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

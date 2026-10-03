@@ -12,18 +12,45 @@ import {
   Phone,
   Plus,
   Shirt,
-  Sparkles,
   Truck,
   WashingMachine,
   X,
+  LogIn,
+  Shield,
+  User as UserIcon,
+  LayoutDashboard,
+  Navigation,
+  Compass,
+  MessageCircle,
+  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/auth-context";
+import { AuthModal } from "@/components/auth-modal";
+import { CustomerPortal } from "@/components/customer-portal";
+import { AdminDashboard } from "@/components/admin-dashboard";
+import { MapDirection } from "@/components/map-direction";
+import { NotificationOnboardingModal } from "@/components/notification-onboarding-modal";
+import { PlacesAutocomplete } from "@/components/places-autocomplete";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import {
+  setupDeviceOrderNotifications,
+  addTrackedOrderId,
+  triggerDeviceNotification,
+} from "@/lib/order-notifications";
 
-import heroImage from "@/assets/laundry-atelier-hero.jpg";
+import heroAtelierImage from "@/assets/images/ghanaian_hero_1790975886532.jpg";
+import courierImage from "@/assets/images/courier_dispatch_1790871292507.jpg";
 import brandLogo from "@/assets/affordable-laundry-logo.jpg";
 import brandIcon from "@/assets/affordable-laundry-icon.jpg";
 import { Button } from "@/components/ui/button";
-import { OrderTracker } from "@/components/order-tracker";
 
 type LaundryItem = {
   id: string;
@@ -43,58 +70,169 @@ type Booking = {
   status: string;
 };
 
+// Easy, straightforward item pricing without technical jargon
 const laundryItems: LaundryItem[] = [
-  { id: "tshirt", name: "T-shirt", note: "Washed, pressed & folded", price: 4 },
-  { id: "shirt", name: "Dress shirt", note: "Carefully pressed on a hanger", price: 5 },
-  { id: "trousers", name: "Trousers", note: "Cleaned with a crisp finish", price: 6 },
-  { id: "dress", name: "Dress", note: "Gentle fabric-conscious care", price: 10 },
-  { id: "hoodie", name: "Hoodie", note: "Deep clean and fresh finish", price: 10 },
-  { id: "bedsheet", name: "Bedsheet", note: "Freshly washed and folded", price: 12 },
-  { id: "jacket", name: "Jacket", note: "Detailed outerwear care", price: 15 },
-  { id: "suit", name: "Two-piece suit", note: "Premium specialist cleaning", price: 25 },
+  { id: "tshirt", name: "T-shirt", note: "Washed, ironed & folded", price: 4 },
+  { id: "shirt", name: "Dress shirt", note: "Ironed smooth on a hanger", price: 5 },
+  { id: "trousers", name: "Trousers & Jeans", note: "Cleaned and neatly ironed", price: 6 },
+  { id: "dress", name: "Dress", note: "Gentle fabric care", price: 10 },
+  { id: "hoodie", name: "Hoodie & Sweater", note: "Deep washed and fresh", price: 10 },
+  { id: "bedsheet", name: "Bedsheet & Cover", note: "Freshly washed and folded", price: 12 },
+  { id: "jacket", name: "Jacket & Coat", note: "Careful outer wear cleaning", price: 15 },
+  { id: "suit", name: "Two-piece Suit", note: "Special gentle pressing", price: 25 },
 ];
 
 const services = [
   {
     number: "01",
-    title: "Wash & fold",
-    copy: "Everyday clothes returned fresh, soft and neatly folded.",
+    title: "Wash & Fold",
+    copy: "Your everyday clothes returned clean, soft, fresh, and neatly folded.",
     icon: WashingMachine,
   },
   {
     number: "02",
-    title: "Press & finish",
-    copy: "Careful ironing for a clean, confident, ready-to-wear finish.",
-    icon: Sparkles,
+    title: "Iron & Pack",
+    copy: "Clean steam ironing so your shirts, trousers, and dresses look sharp.",
+    icon: Shirt,
   },
   {
     number: "03",
-    title: "Pickup & delivery",
-    copy: "Free collection and return within KNUST, right on schedule.",
+    title: "Free Doorstep Pickup",
+    copy: "We pick up and bring back to your hostel, hall, or room for free.",
     icon: Truck,
   },
 ];
 
-const savedBookingKey = "affordable-laundry-website-booking";
-const navigationItems = [
-  { label: "Services", id: "services" },
-  { label: "Pricing", id: "pricing" },
-  { label: "Track Order", id: "tracker" },
-  { label: "How it works", id: "process" },
-  { label: "Contact", id: "contact" },
+// Straightforward answers to everyday laundry questions around KNUST & Kumasi
+const faqs = [
+  {
+    q: "How do I prepare my clothes before the rider arrives?",
+    a: "Just put your dirty clothes in any bag or rubber bag (poly bag). You don’t need to count them first; our rider will count them together with you at your door, or we count them at our shop and text you a confirmation right away.",
+  },
+  {
+    q: "What items and clothes do you wash?",
+    a: "We wash all everyday clothes: T-shirts, shirts, trousers, jeans, dresses, hoodies, shorts, boxers, and school uniforms or lab coats. We also wash bedsheets, duvet covers, pillowcases, and towels. If you have delicate native wear or funeral fabrics, tell the rider and we take special gentle care.",
+  },
+  {
+    q: "How and when do I pay for my laundry?",
+    a: "You only pay AFTER your clothes are washed, dried, ironed, and delivered back to you. You can pay via Mobile Money (MTN MoMo, Telecel Cash) or give cash directly to the rider.",
+  },
+  {
+    q: "Do you charge by weight (kilo) or per cloth?",
+    a: "We charge simple prices for each single cloth (from GHC 4 per piece). There are no heavy weighing scales, wet weight tricks, or guessing. You know exactly what you are paying before we start.",
+  },
+  {
+    q: "Will the rider come directly to my hostel or hall gate?",
+    a: "Yes! Whether you are staying in Unity Hall (Conti), Katanga, Republic, Queen's, Independence, Africa Hall, or in hostels around Ayeduase, Kotei, Bomso, or Gyinyase, our dispatch rider calls your phone directly when outside your gate.",
+  },
+  {
+    q: "How fast will my clothes be ready?",
+    a: "Normally within 1 to 2 days! We wash them clean with sweet-smelling soap, dry them, steam iron them smooth, and pack them neatly in protective bags so you can put them straight into your wardrobe.",
+  },
+  {
+    q: "What happens if it rains or there is lights out (dumsor)?",
+    a: "We have backup solar power, plant generators, and industrial dryers. Rain or dumsor will never delay your clean clothes!",
+  },
 ];
+
+const savedBookingKey = "affordable-laundry-latest-booking";
 
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 export function LaundryApp() {
+  const { user, profile, isAdmin, logout } = useAuth();
+  const [currentView, setCurrentView] = useState<"landing" | "dashboard">("landing");
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [showNotificationOnboarding, setShowNotificationOnboarding] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({ tshirt: 2, shirt: 1 });
   const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
-  const [selectedTrackerOrder, setSelectedTrackerOrder] = useState<string | undefined>("AL-84920");
+  const [typedLocation, setTypedLocation] = useState("");
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("top");
+  const [pendingOpenBookingAfterAuth, setPendingOpenBookingAfterAuth] = useState(false);
+
+  // Track window scroll for transparent title bar on hero section & active nav item
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 40);
+
+      const sections = ["services", "pricing", "location", "process", "faq", "contact"];
+      const scrollPos = window.scrollY + 220;
+      for (const sec of sections) {
+        const el = document.getElementById(sec);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPos >= top && scrollPos < top + height) {
+            setActiveSection(sec);
+            return;
+          }
+        }
+      }
+      if (window.scrollY < 200) {
+        setActiveSection("top");
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Setup background live notification watcher for orders tracked on this device
+  useEffect(() => {
+    const unsub = setupDeviceOrderNotifications((orderId, newStatus, title, body) => {
+      toast.info(`${title}: ${body}`, {
+        duration: 8000,
+      });
+    });
+    return () => unsub();
+  }, []);
+
+  // Check if notification permission prompt is needed on new device
+  const handleNavigateToDashboard = () => {
+    if (user) {
+      const alreadyOnboarded = localStorage.getItem(`al_notif_onboarded_${user.uid}`);
+      if (!alreadyOnboarded) {
+        setShowNotificationOnboarding(true);
+      }
+    }
+    setCurrentView("dashboard");
+  };
+
+  // Sync hash #dashboard on client
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const handleHash = () => {
+        if (window.location.hash === "#dashboard") {
+          if (user) {
+            handleNavigateToDashboard();
+          } else {
+            setAuthModalOpen(true);
+          }
+        }
+      };
+
+      handleHash();
+      window.addEventListener("hashchange", handleHash);
+      return () => window.removeEventListener("hashchange", handleHash);
+    }
+  }, [user]);
+
+  const navItems = useMemo(() => {
+    return [
+      { label: "Services", id: "services" },
+      { label: "Prices", id: "pricing" },
+      { label: "Map & Shop", id: "location" },
+      { label: "How It Works", id: "process" },
+      { label: "FAQ", id: "faq" },
+      { label: "Call Us", id: "contact" },
+    ];
+  }, []);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(savedBookingKey);
@@ -103,7 +241,6 @@ export function LaundryApp() {
       const booking = JSON.parse(raw) as Booking;
       if (booking.id && booking.items) {
         setLatestBooking(booking);
-        setSelectedTrackerOrder(booking.id);
       }
     } catch {
       window.localStorage.removeItem(savedBookingKey);
@@ -116,523 +253,1124 @@ export function LaundryApp() {
   );
   const itemCount = Object.values(quantities).reduce((sum, quantity) => sum + quantity, 0);
 
-  const changeQuantity = (id: string, amount: number) => {
-    setQuantities((current) => ({
-      ...current,
-      [id]: Math.max(0, Math.min(20, (current[id] ?? 0) + amount)),
-    }));
+  const changeQuantity = (id: string, delta: number) => {
+    setQuantities((current) => {
+      const next = Math.max(0, (current[id] ?? 0) + delta);
+      return { ...current, [id]: next };
+    });
   };
 
   const openBooking = () => {
     setBookingComplete(false);
     setBookingOpen(true);
-    setMenuOpen(false);
   };
 
-  const submitBooking = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (itemCount === 0) {
-      toast.error("Add at least one item to your collection.");
+  const handleBookingTrigger = () => {
+    if (!user) {
+      toast.info("Please sign up or sign in to confirm your pickup and track your clothes!", {
+        duration: 4500,
+      });
+      setPendingOpenBookingAfterAuth(true);
+      setAuthModalOpen(true);
       return;
     }
-    const data = new FormData(event.currentTarget);
+    openBooking();
+  };
+
+  const submitBooking = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (itemCount === 0) {
+      toast.error("Please pick at least one cloth before booking.");
+      return;
+    }
+
+    if (!user) {
+      toast.info("Please create an account or sign in to complete your pickup!", {
+        duration: 4500,
+      });
+      setPendingOpenBookingAfterAuth(true);
+      setAuthModalOpen(true);
+      return;
+    }
+
+    const form = new FormData(event.currentTarget);
     const newBookingId = `AL${Date.now().toString().slice(-5)}`;
+    const customer = String(form.get("name") || profile?.displayName || "Valued Customer");
+    const phone = String(form.get("phone") || profile?.phone || "");
+    const location = (typedLocation || String(form.get("location") || "")).trim() || "KNUST Campus";
+    const date = String(form.get("date") || "Tomorrow");
+
     const booking: Booking = {
       id: newBookingId,
-      customer: String(data.get("name") ?? ""),
-      phone: String(data.get("phone") ?? ""),
-      location: String(data.get("location") ?? ""),
-      date: String(data.get("date") ?? ""),
+      customer,
+      phone,
+      location,
+      date,
       items: quantities,
       total,
-      status: "Collection scheduled",
+      status: "COLLECTION_SCHEDULED",
     };
-    window.localStorage.setItem(savedBookingKey, JSON.stringify(booking));
 
-    // Also persist to tracked orders list
+    const cleanEmail = (user?.email || profile?.email || "").trim().toLowerCase();
+    const orderRecord = {
+      id: newBookingId,
+      docId: newBookingId,
+      userId: user?.uid || "guest",
+      customerName: customer,
+      customerEmail: cleanEmail,
+      customerPhone: phone,
+      location,
+      pickupDate: date,
+      items: quantities,
+      itemCount,
+      total,
+      status: "COLLECTION_SCHEDULED" as const,
+      stageNotes: "Pickup request confirmed. Rider assigned.",
+      riderName: "Affordable Laundry Dispatch Rider",
+      riderPhone: "053 233 1150",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Save to Firestore
     try {
-      const stored = window.localStorage.getItem("affordable-laundry-tracked-orders");
-      const currentList = stored ? JSON.parse(stored) : [];
-      const newTracked = {
-        id: newBookingId,
-        customer: booking.customer,
-        phone: booking.phone,
-        location: booking.location,
-        date: booking.date,
-        items: quantities,
-        total,
-        stage: "confirmed" as const,
-        createdAt: "Just now",
-        estimatedDelivery: "Within 24-48 hours",
-        riderName: "Affordable Laundry Dispatch",
-        riderPhone: "053 233 1150",
-        notes: "Collection scheduled with customer.",
-      };
-      window.localStorage.setItem(
-        "affordable-laundry-tracked-orders",
-        JSON.stringify([newTracked, ...currentList]),
-      );
+      const orderRef = doc(db, "orders", newBookingId);
+      await setDoc(orderRef, orderRecord);
+    } catch (e) {
+      console.error("Error saving booking to Firestore:", e);
+    }
+
+    // Persist into unified order cache (ensures manual & Google accounts share exact same data)
+    try {
+      const rawCache = window.localStorage.getItem("al_orders_cache");
+      const cacheList = rawCache ? JSON.parse(rawCache) : [];
+      // Remove any duplicate id if it existed
+      const filtered = cacheList.filter((item: { id: string }) => item.id !== newBookingId);
+      filtered.unshift(orderRecord);
+      window.localStorage.setItem("al_orders_cache", JSON.stringify(filtered));
     } catch {
       // ignore
     }
 
-    setSelectedTrackerOrder(newBookingId);
+    // Register this order on this device for live background push notifications
+    addTrackedOrderId(newBookingId);
+    triggerDeviceNotification(
+      `Affordable Laundry: Pickup Booked!`,
+      `Order #${newBookingId} is set for ${date}. We'll notify your phone when the rider is coming.`,
+      newBookingId,
+      "COLLECTION_SCHEDULED",
+    );
+
+    window.localStorage.setItem(savedBookingKey, JSON.stringify(booking));
     setLatestBooking(booking);
     setBookingComplete(true);
-    toast.success("Your collection has been scheduled.");
+    toast.success("Your pickup has been booked!");
   };
 
+  // The admin gmail MUST have only ONE dashboard as admin, not 2 separate dashboards
+  if (currentView === "dashboard") {
+    // If notification onboarding hasn't been completed on this device, prompt before showing dashboard
+    if (showNotificationOnboarding && user) {
+      return (
+        <NotificationOnboardingModal
+          userId={user.uid}
+          isOpen={true}
+          onComplete={() => setShowNotificationOnboarding(false)}
+        />
+      );
+    }
+
+    if (isAdmin) {
+      return (
+        <>
+          <AdminDashboard
+            onBackToLanding={() => {
+              setCurrentView("landing");
+              if (typeof window !== "undefined" && window.location.hash === "#dashboard") {
+                window.history.pushState(null, "", window.location.pathname);
+              }
+            }}
+          />
+          <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <CustomerPortal
+          onBackToLanding={() => {
+            setCurrentView("landing");
+            if (typeof window !== "undefined" && window.location.hash === "#dashboard") {
+              window.history.pushState(null, "", window.location.pathname);
+            }
+          }}
+        />
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          onSuccess={() => handleNavigateToDashboard()}
+        />
+      </>
+    );
+  }
+
   return (
-    <div className="site-shell">
-      <header className="site-header">
-        <a className="site-brand" href="#top" aria-label="Affordable Laundry home">
-          <img src={brandIcon} alt="Affordable Laundry" />
-          <span>
-            <strong>Affordable Laundry</strong>
-            <small>Garment care · Kumasi</small>
-          </span>
-        </a>
-        <nav
-          className={menuOpen ? "site-nav site-nav-open" : "site-nav"}
-          aria-label="Main navigation"
-        >
-          {navigationItems.map(({ label, id }) => (
-            <Button
-              key={id}
-              variant="ghost"
-              onClick={() => {
-                scrollToSection(id);
-                setMenuOpen(false);
-              }}
-            >
-              {label}
-            </Button>
-          ))}
-          <Button className="nav-book" onClick={openBooking}>
-            Book a collection
-            <ArrowRight />
-          </Button>
-        </nav>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="menu-trigger"
-          onClick={() => setMenuOpen((value) => !value)}
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
-        >
-          {menuOpen ? <X /> : <Menu />}
-        </Button>
-      </header>
-
-      <main>
-        <section id="top" className="atelier-hero">
-          <div className="hero-copy reveal-up">
-            <div className="hero-kicker">
-              <span />
-              Artisan laundry & garment care
-            </div>
-            <h1>
-              Redefining <em>wardrobe</em> care.
-            </h1>
-            <div className="hero-intro">
-              <p>
-                Your clothes, collected, expertly cleaned and returned beautifully finished—without
-                disrupting your day.
-              </p>
-              <div>
-                <Button className="hero-cta" onClick={openBooking}>
-                  Book a collection
-                  <ArrowRight />
-                </Button>
-                <small>24-hour turnaround available</small>
-              </div>
-            </div>
-            <div className="hero-proof">
-              <span>
-                <strong>24hr</strong> turnaround
-              </span>
-              <span>
-                <strong>Free</strong> KNUST pickup
-              </span>
-              <span>
-                <strong>GHC 4</strong> T-shirts
-              </span>
-            </div>
-          </div>
-
-          <div className="hero-visual reveal-late">
-            <div className="hero-image-wrap">
+    <div className="site-shell min-h-screen bg-background text-foreground antialiased font-sans overflow-x-hidden">
+      {/* Floating Glassmorphic Top Navbar - Very transparent on hero section */}
+      <header
+        className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
+          isScrolled
+            ? "bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-b border-white/40 dark:border-white/10 shadow-sm py-2.5"
+            : "bg-black/15 backdrop-blur-xs border-b border-white/15 py-3.5"
+        }`}
+      >
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <a
+            className="flex items-center gap-3 no-underline group"
+            href="#top"
+            aria-label="Affordable Laundry home"
+          >
+            <div className="relative">
               <img
-                src={heroImage}
-                width={1536}
-                height={1024}
-                alt="Garment-care specialist inspecting freshly cleaned shirts"
+                src={brandIcon}
+                alt="Affordable Laundry"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover border border-sky-400/40 shadow-xs group-hover:scale-105 group-hover:rotate-1 transition-all duration-300"
               />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-sky-400 border-2 border-background animate-ping opacity-75" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-sky-500 border-2 border-background" />
             </div>
-            <div
-              className="floating-status cursor-pointer transition-transform hover:scale-[1.02]"
-              onClick={() => {
-                if (latestBooking) {
-                  setSelectedTrackerOrder(latestBooking.id);
-                }
-                scrollToSection("tracker");
-              }}
-              role="button"
-              tabIndex={0}
-              title="Click to track your order"
-            >
-              <div className="status-heading">
-                <span>
-                  <i />
-                  Live status
-                </span>
-                <PackageCheck />
-              </div>
-              <strong>
-                {latestBooking ? `Order #${latestBooking.id}` : "Live order tracking"}
-              </strong>
-              <p>{latestBooking ? latestBooking.status : "Track your garments in real-time"}</p>
-              <div className="status-line">
-                <span />
-              </div>
-              <div className="flex items-center justify-between">
-                <small>
-                  <Check /> Item-based pricing
-                </small>
-                <span className="text-[11px] text-primary font-bold inline-flex items-center gap-0.5">
-                  Track now <ArrowRight className="w-3 h-3" />
-                </span>
-              </div>
+            <div className="flex flex-col">
+              <span
+                className={`font-black text-base sm:text-lg tracking-tight leading-none transition-colors duration-300 ${
+                  isScrolled ? "text-foreground" : "text-white drop-shadow-sm"
+                }`}
+              >
+                Affordable Laundry
+              </span>
+              <span
+                className={`text-[10px] uppercase font-bold tracking-widest mt-1 transition-colors duration-300 ${
+                  isScrolled ? "text-sky-600 dark:text-sky-400" : "text-sky-300"
+                }`}
+              >
+                KNUST · Kumasi
+              </span>
             </div>
-          </div>
-          <div className="scroll-note">
-            <span />
-            Scroll to discover
-          </div>
-        </section>
+          </a>
 
-        <div className="service-marquee" aria-hidden="true">
-          <div>
-            WASHED WITH CARE <span>✦</span> PRESSED WITH PRECISION <span>✦</span> DELIVERED ON TIME{" "}
-            <span>✦</span> WASHED WITH CARE <span>✦</span> PRESSED WITH PRECISION <span>✦</span>{" "}
-            DELIVERED ON TIME
+          {/* Desktop Navigation Links - Dynamic Animated Middle Bar */}
+          <nav
+            className={`hidden lg:flex items-center gap-1 p-1 rounded-full border transition-all duration-500 shadow-md ${
+              isScrolled
+                ? "bg-muted/70 backdrop-blur-xl border-border/70"
+                : "bg-white/10 backdrop-blur-2xl border-white/20 shadow-black/20"
+            }`}
+          >
+            {navItems.map(({ label, id }) => {
+              const isActive = activeSection === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => scrollToSection(id)}
+                  className={`relative rounded-full text-xs font-bold px-4 h-8 transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 ${
+                    isActive
+                      ? isScrolled
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-white text-black shadow-md shadow-white/20"
+                      : isScrolled
+                        ? "text-foreground/80 hover:text-foreground hover:bg-card/70"
+                        : "text-white/85 hover:text-white hover:bg-white/15"
+                  }`}
+                >
+                  {label}
+                  {isActive && (
+                    <span
+                      className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${
+                        isScrolled ? "bg-sky-500" : "bg-sky-400"
+                      }`}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Right Action Cluster - Clean order: [My Dashboard] -> [Book Collection] -> [Sign Out LAST] */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {user ? (
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                {/* 1. Dashboard Button */}
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleNavigateToDashboard}
+                  className={`rounded-2xl text-xs font-extrabold shadow-sm gap-1.5 h-9 sm:h-10 px-3.5 sm:px-4 ${
+                    isAdmin
+                      ? "bg-sky-600 hover:bg-sky-700 text-white"
+                      : "bg-primary text-primary-foreground"
+                  }`}
+                >
+                  {isAdmin ? (
+                    <Shield className="w-3.5 h-3.5" />
+                  ) : (
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isAdmin ? "Admin Command" : "My Dashboard"}</span>
+                </Button>
+
+                {/* 2. Book Collection Button */}
+                <Button
+                  onClick={handleBookingTrigger}
+                  className={`rounded-2xl text-xs font-extrabold shadow-md h-9 sm:h-10 px-3.5 sm:px-4 gap-1.5 hidden md:inline-flex transition-all duration-300 hover:scale-105 active:scale-95 ${
+                    !isScrolled
+                      ? "bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/30 shadow-lg"
+                      : "bg-foreground text-background hover:bg-foreground/90"
+                  }`}
+                >
+                  <span>Book Collection</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+
+                {/* 3. Sign Out Button - Placed LAST as requested */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className={`rounded-2xl text-xs font-semibold h-9 px-2.5 hidden sm:inline-flex transition-colors duration-300 ${
+                    !isScrolled
+                      ? "text-white/80 hover:text-white hover:bg-white/10"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Sign Out"
+                >
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAuthModalOpen(true)}
+                  className={`rounded-2xl text-xs font-semibold h-9 px-3 transition-all duration-300 ${
+                    !isScrolled
+                      ? "text-white border border-white/25 bg-white/10 hover:bg-white/20 hover:text-white backdrop-blur-md"
+                      : "hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <LogIn className="w-3.5 h-3.5 mr-1" />
+                  Sign In
+                </Button>
+
+                <Button
+                  onClick={handleBookingTrigger}
+                  className={`rounded-2xl text-xs font-extrabold shadow-md h-9 sm:h-10 px-4 gap-1.5 hidden md:inline-flex transition-all duration-300 hover:scale-105 active:scale-95 ${
+                    !isScrolled
+                      ? "bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/30 shadow-lg"
+                      : "bg-foreground text-background hover:bg-foreground/90"
+                  }`}
+                >
+                  <span>Book Collection</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            )}
+
+            {/* Mobile Menu Hamburger */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`lg:hidden rounded-2xl w-9 h-9 transition-colors duration-300 ${
+                !isScrolled ? "text-white hover:bg-white/15" : "text-foreground hover:bg-muted"
+              }`}
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Toggle Navigation Menu"
+            >
+              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
           </div>
         </div>
 
-        <section id="services" className="services-section section-pad">
-          <div className="section-heading">
-            <p className="section-kicker">Care, from door to wardrobe</p>
-            <h2>
-              Every piece receives the <em>right</em> attention.
-            </h2>
-            <p>
-              Simple service, thoughtful handling and a polished finish for the clothes you live in.
-            </p>
-          </div>
-          <div className="service-grid">
-            {services.map(({ number, title, copy, icon: Icon }) => (
-              <article className="service-feature" key={title}>
-                <div className="feature-top">
-                  <span>{number}</span>
-                  <Icon />
-                </div>
-                <h3>{title}</h3>
-                <p>{copy}</p>
-                <Button variant="ghost" onClick={openBooking} aria-label={`Book ${title}`}>
-                  Explore service
-                  <ArrowRight />
-                </Button>
-              </article>
-            ))}
-          </div>
-        </section>
+        {/* Mobile Dropdown Nav Menu - Ultra-transparent glass-like, dynamic & animated */}
+        {menuOpen && (
+          <div className="lg:hidden mx-3 sm:mx-4 mt-2 p-4 sm:p-5 rounded-3xl bg-white/35 dark:bg-black/55 backdrop-blur-3xl border border-white/50 dark:border-white/20 shadow-2xl space-y-3.5 animate-in fade-in zoom-in-95 slide-in-from-top-3 duration-300 ring-1 ring-white/30">
+            {/* Quick status bar inside mobile menu */}
+            <div className="flex items-center justify-between pb-2.5 border-b border-white/25 px-1">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500" />
+                </span>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                  {user
+                    ? `Active Member · ${profile?.displayName || "Member"}`
+                    : "Fast KNUST Pickup"}
+                </span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/30 dark:bg-white/10 border border-white/25 text-muted-foreground">
+                Kumasi Campus
+              </span>
+            </div>
 
-        <section id="pricing" className="pricing-section section-pad">
-          <div className="pricing-intro">
-            <p className="section-kicker">Transparent item pricing</p>
-            <h2>
-              Know the price <em>before</em> we arrive.
-            </h2>
-            <p>
-              No weighing. No confusing estimates. Select each garment and see your collection total
-              instantly.
-            </p>
-            <div className="pricing-callout">
-              <Shirt />
-              <span>Everyday essential</span>
-              <strong>T-shirt · GHC 4</strong>
+            {/* Nav item links with rich icons, glass pill hover and active glowing sky dots */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {navItems.map(({ label, id }) => {
+                const isActive = activeSection === id;
+                const iconMap: Record<string, typeof WashingMachine> = {
+                  services: WashingMachine,
+                  pricing: Shirt,
+                  location: MapPin,
+                  process: Compass,
+                  faq: HelpCircle,
+                  contact: Phone,
+                };
+                const ItemIcon = iconMap[id] || Compass;
+
+                return (
+                  <button
+                    key={id}
+                    onClick={() => {
+                      scrollToSection(id);
+                      setMenuOpen(false);
+                    }}
+                    className={`flex items-center gap-2.5 py-3 px-3.5 rounded-2xl text-xs font-bold transition-all duration-300 text-left border ${
+                      isActive
+                        ? "bg-white/85 dark:bg-white/25 text-sky-700 dark:text-sky-300 border-sky-400/50 shadow-md shadow-sky-500/15 scale-[1.02]"
+                        : "bg-white/25 dark:bg-white/5 border-white/30 dark:border-white/10 text-foreground hover:bg-white/45 hover:border-sky-400/30 hover:scale-[1.02] active:scale-95"
+                    }`}
+                  >
+                    <div
+                      className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
+                        isActive
+                          ? "bg-sky-500 text-white shadow-xs"
+                          : "bg-white/30 dark:bg-white/10 text-sky-600 dark:text-sky-300"
+                      }`}
+                    >
+                      <ItemIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="truncate">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mobile Menu Action Buttons */}
+            <div className="pt-2.5 border-t border-white/25 flex flex-col gap-2">
+              <Button
+                onClick={() => {
+                  setMenuOpen(false);
+                  handleBookingTrigger();
+                }}
+                className="w-full rounded-2xl text-xs font-black h-12 bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25 gap-2 transition-transform hover:scale-[1.02] active:scale-98"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Book Doorstep Pickup (GHC 4/piece)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+
+              {user ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleNavigateToDashboard();
+                    }}
+                    className="w-full rounded-2xl text-xs font-bold h-10 border-white/35 bg-white/30 hover:bg-white/45 backdrop-blur-xl text-foreground gap-1.5 shadow-2xs"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 text-sky-500" />
+                    <span>{isAdmin ? "Admin HQ" : "Dashboard"}</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      logout();
+                    }}
+                    className="w-full rounded-2xl text-xs font-bold h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAuthModalOpen(true);
+                  }}
+                  className="w-full rounded-2xl text-xs font-bold h-10 border-white/35 bg-white/30 hover:bg-white/45 backdrop-blur-xl text-foreground gap-1.5 shadow-2xs"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Sign In / Create Account</span>
+                </Button>
+              )}
+
+              {/* Direct Call Rider Hotlink */}
+              <a
+                href="tel:0532331150"
+                className="text-center text-[11px] font-bold text-muted-foreground hover:text-sky-500 transition-colors py-1 flex items-center justify-center gap-1.5"
+              >
+                <Phone className="w-3 h-3 text-sky-500" />
+                <span>Call Hotline Rider: 053 233 1150</span>
+              </a>
             </div>
           </div>
-          <div className="price-list">
-            {laundryItems.map((item) => (
-              <div className="price-row" key={item.id}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <small>{item.note}</small>
-                </div>
-                <span>GHC {item.price}</span>
-                <div className="quantity-control" aria-label={`${item.name} quantity`}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => changeQuantity(item.id, -1)}
-                    aria-label={`Remove one ${item.name}`}
-                  >
-                    <Minus />
-                  </Button>
-                  <output>{quantities[item.id] ?? 0}</output>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => changeQuantity(item.id, 1)}
-                    aria-label={`Add one ${item.name}`}
-                  >
-                    <Plus />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            <div className="price-total">
-              <div>
-                <span>Your collection</span>
-                <small>
-                  {itemCount} {itemCount === 1 ? "item" : "items"} selected
-                </small>
-              </div>
-              <strong>GHC {total}</strong>
-              <Button onClick={openBooking}>
-                Continue to book
-                <ArrowRight />
+        )}
+      </header>
+
+      {/* Main Landing Sections */}
+      <main className="w-full overflow-x-hidden">
+        {/* Full Screen Width Hero Canvas with Curled, Animated Bottom Edge */}
+        <section className="relative w-full overflow-hidden pt-20 sm:pt-24 pb-14 sm:pb-24 group">
+          {/* High-Resolution Ghanaian Laundry Specialists Atelier Photo */}
+          <img
+            src={heroAtelierImage}
+            alt="Affordable Laundry Friendly Ghanaian Team in Kumasi Atelier"
+            className="absolute inset-0 w-full h-full object-cover object-center scale-100 transition-transform duration-1000 group-hover:scale-105"
+            loading="eager"
+            decoding="async"
+          />
+
+          {/* Deep Cinematic Gradient Overlays for High Legibility & Warmth */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/92 via-black/75 to-black/50 sm:from-black/88 sm:via-black/72 sm:to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/35" />
+
+          {/* Hero Content Container Positioned on Top */}
+          <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-10 sm:py-16 lg:py-20 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            {/* Kicker Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/25 text-white text-xs font-bold uppercase tracking-widest shadow-xl">
+              <span>Fast Laundry Pickup & Delivery in KNUST</span>
+            </div>
+
+            {/* Main Headline */}
+            <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.08] drop-shadow-md max-w-4xl">
+              Clean clothes, <br />
+              <span className="text-sky-300 italic font-serif">delivered fresh</span> to your door.
+            </h1>
+
+            {/* Easy Simple Explanation */}
+            <p className="text-xs sm:text-base lg:text-lg text-white/90 leading-relaxed font-normal max-w-2xl drop-shadow-xs">
+              Simple prices for each cloth — no weighing scales, no guessing. Free pickup and
+              doorstep delivery to all KNUST halls, hostels, and Kumasi homes with live phone
+              updates.
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+              <Button
+                onClick={handleBookingTrigger}
+                className="h-12 sm:h-14 px-8 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white font-extrabold text-xs sm:text-sm shadow-2xl shadow-sky-500/30 transition-all hover:scale-[1.03] active:scale-97 gap-2"
+              >
+                <span>Book a Pickup</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => scrollToSection("pricing")}
+                className="h-12 sm:h-14 px-7 rounded-2xl border border-white/30 bg-white/10 backdrop-blur-xl text-white font-bold text-xs sm:text-sm hover:bg-white/20 hover:text-white transition-all shadow-xl"
+              >
+                See Simple Prices
               </Button>
             </div>
+
+            {/* 3 Strategic Key Highlights - Ultra-Clean Translucent Glassmorphic Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 sm:pt-6 max-w-3xl">
+              <div className="p-4 rounded-2xl bg-white/15 dark:bg-white/5 backdrop-blur-2xl border border-white/25 text-white shadow-2xl hover:bg-white/25 hover:scale-[1.02] transition-all">
+                <span className="text-xl sm:text-2xl font-black text-white block">GHC 4</span>
+                <span className="text-xs text-white/90 font-medium">Per T-shirt</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/15 dark:bg-white/5 backdrop-blur-2xl border border-white/25 text-white shadow-2xl hover:bg-white/25 hover:scale-[1.02] transition-all">
+                <span className="text-xl sm:text-2xl font-black text-white block">1 to 2 Days</span>
+                <span className="text-xs text-white/90 font-medium">Fast & ready</span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white/15 dark:bg-white/5 backdrop-blur-2xl border border-white/25 text-white shadow-2xl hover:bg-white/25 hover:scale-[1.02] transition-all">
+                <span className="text-xl sm:text-2xl font-black text-white block">Free</span>
+                <span className="text-xs text-white/90 font-medium">Campus pickup</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Curled, Dynamic and Animated Wave Lower Edge */}
+          <div className="absolute -bottom-1 inset-x-0 w-full overflow-hidden leading-none z-20 pointer-events-none">
+            <svg
+              viewBox="0 0 1200 120"
+              preserveAspectRatio="none"
+              className="relative block w-full h-10 sm:h-16 lg:h-20 text-background fill-current transition-all animate-wave"
+            >
+              <path
+                d="M0,0 C150,90 350,-40 500,60 C650,140 900,-30 1200,40 L1200,120 Z"
+                className="opacity-40 animate-pulse duration-1000"
+              />
+              <path d="M0,25 C200,110 420,10 600,70 C800,130 1000,20 1200,65 L1200,120 L0,120 Z" />
+            </svg>
           </div>
         </section>
 
-        <OrderTracker onOpenBooking={openBooking} selectedOrderId={selectedTrackerOrder} />
-
-        <section id="process" className="process-section section-pad">
-          <div className="process-heading">
-            <p className="section-kicker">A refreshingly simple routine</p>
-            <h2>
-              From your door, <em>back to you.</em>
-            </h2>
+        {/* Marquee Banner - Automatically Moving Horizontally */}
+        <div className="py-3.5 bg-muted/60 border-y border-border overflow-hidden whitespace-nowrap text-xs font-extrabold tracking-widest text-muted-foreground uppercase flex select-none">
+          <div className="animate-marquee-infinite flex items-center gap-8 shrink-0">
+            <span>✦ WASHED CLEAN</span>
+            <span>✦ STEAM IRONED</span>
+            <span>✦ PACKED NEATLY</span>
+            <span>✦ FREE DOORSTEP PICKUP IN KNUST</span>
+            <span>✦ GHC 4 PER T-SHIRT</span>
+            <span>✦ PAY WITH MOMO</span>
+            <span>✦ 1 TO 2 DAYS READY</span>
+            <span>✦ WASHED CLEAN</span>
+            <span>✦ STEAM IRONED</span>
+            <span>✦ PACKED NEATLY</span>
+            <span>✦ FREE DOORSTEP PICKUP IN KNUST</span>
+            <span>✦ GHC 4 PER T-SHIRT</span>
+            <span>✦ PAY WITH MOMO</span>
+            <span>✦ 1 TO 2 DAYS READY</span>
           </div>
-          <div className="process-steps">
-            {[
-              [
-                "01",
-                "Choose your items",
-                "Build your collection with clear prices for every garment.",
-              ],
-              ["02", "We collect", "Pick a convenient time and we come to you within KNUST."],
-              [
-                "03",
-                "We return it fresh",
-                "Your clothes come back clean, pressed and neatly packed.",
-              ],
-            ].map(([number, title, copy]) => (
-              <article key={number}>
-                <span>{number}</span>
-                <h3>{title}</h3>
-                <p>{copy}</p>
-              </article>
+        </div>
+
+        {/* Services Section - Transparent Glass Cards */}
+        <section id="services" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto space-y-2.5 mb-10">
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">
+              Care From Door to Wardrobe
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
+              We Take Good Care of{" "}
+              <span className="text-primary italic font-serif">Every Single Cloth</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Gentle washing, clean soap, smooth steam ironing, and fast delivery to your door.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+            {services.map(({ number, title, copy, icon: Icon }) => (
+              <div
+                key={title}
+                className="p-6 sm:p-8 bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-xl hover:-translate-y-2 hover:shadow-2xl hover:border-sky-400/50 transition-all duration-300 space-y-4 group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-muted-foreground font-mono">
+                    {number}
+                  </span>
+                  <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Icon className="w-6 h-6" />
+                  </div>
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold text-foreground">{title}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{copy}</p>
+                <button
+                  onClick={handleBookingTrigger}
+                  className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-1 pt-2 group-hover:translate-x-1 transition-transform"
+                >
+                  <span>Pick my clothes</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             ))}
           </div>
         </section>
 
-        <section className="testimonial-section section-pad">
-          <blockquote>
-            “They make laundry feel less like a chore and more like a wardrobe reset.”
-          </blockquote>
-          <div>
-            <span>BA</span>
-            <p>
-              <strong>Bernard A.</strong>
-              <small>KNUST, Kumasi</small>
-            </p>
+        {/* Pricing Calculator Section - Transparent Glass Containers */}
+        <section id="pricing" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Pricing Intro Glass Container */}
+            <div className="lg:col-span-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-xl space-y-4">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                Clear Prices for Every Cloth
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
+                Know the price <span className="text-primary italic font-serif">before</span> we
+                come to pick up.
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                No weighing scales. No guessing. Pick your items below and watch your total show
+                right away.
+              </p>
+
+              {/* Courier Showcase Photo */}
+              <div className="rounded-3xl overflow-hidden border border-border shadow-lg relative group">
+                <img
+                  src={courierImage}
+                  alt="Affordable Laundry Friendly Delivery Courier"
+                  className="w-full h-52 sm:h-56 object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent p-4 flex flex-col justify-end text-white">
+                  <span className="text-xs font-bold">Doorstep Courier Pickup</span>
+                  <p className="text-[11px] text-white/80">
+                    Friendly riders coming to your hall or hostel gate
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Garment List & Total Card - Translucent Glass */}
+            <div className="lg:col-span-7 bg-white/45 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl space-y-6">
+              <div className="space-y-2.5">
+                {laundryItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3 sm:p-3.5 rounded-2xl bg-white/30 dark:bg-white/5 backdrop-blur-xl border border-white/30 dark:border-white/10 hover:border-sky-400/40 hover:bg-white/50 transition-all duration-200 flex items-center justify-between"
+                  >
+                    <div>
+                      <span className="font-bold text-xs sm:text-sm text-foreground block">
+                        {item.name}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">{item.note}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs sm:text-sm font-black text-sky-600 dark:text-sky-400 min-w-[50px] text-right">
+                        GHC {item.price}
+                      </span>
+                      <div className="flex items-center gap-1 bg-background/80 backdrop-blur-md border border-border rounded-xl p-1 shadow-2xs">
+                        <button
+                          onClick={() => changeQuantity(item.id, -1)}
+                          className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-xs font-bold"
+                          aria-label={`Remove one ${item.name}`}
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="w-6 text-center text-xs font-bold text-foreground">
+                          {quantities[item.id] ?? 0}
+                        </span>
+                        <button
+                          onClick={() => changeQuantity(item.id, 1)}
+                          className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-xs font-bold"
+                          aria-label={`Add one ${item.name}`}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total Summary Footer - Translucent Glass */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-sky-500/15 backdrop-blur-xl border border-sky-400/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-sm">
+                <div>
+                  <span className="text-xs text-muted-foreground block font-medium">
+                    Total for {itemCount} {itemCount === 1 ? "cloth" : "clothes"}:
+                  </span>
+                  <span className="text-2xl sm:text-3xl font-black text-foreground">
+                    GHC {total}
+                  </span>
+                </div>
+                <Button
+                  onClick={handleBookingTrigger}
+                  className="rounded-2xl text-xs font-extrabold h-11 sm:h-12 px-6 shadow-md gap-2 bg-sky-600 hover:bg-sky-500 text-white transition-all hover:scale-105 active:scale-95"
+                >
+                  <span>Book This Pickup</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section id="contact" className="contact-section section-pad">
-          <div>
-            <p className="section-kicker">Ready when you are</p>
-            <h2>
-              Let’s make laundry your <em>easiest</em> task.
+        {/* MAP & TURN-BY-TURN DIRECTION SECTION */}
+        <MapDirection />
+
+        {/* Routine Process Section */}
+        <section id="process" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto space-y-2.5 mb-10">
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">
+              Super Simple Steps
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
+              From Your Door, <span className="text-primary italic font-serif">Back to You</span>
             </h2>
           </div>
-          <Button className="contact-cta" onClick={openBooking}>
-            Schedule your collection
-            <ArrowRight />
-          </Button>
-          <div className="contact-details">
-            <p>
-              <MapPin />
-              Gyinyase, opposite KNUST Business School, Kumasi
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+            {[
+              {
+                step: "01",
+                title: "Pick Your Clothes",
+                desc: "Choose the items you have with our clear per-cloth prices.",
+              },
+              {
+                step: "02",
+                title: "We Pick Up at Your Door",
+                desc: "Our rider comes to your hostel, hall, or house at your chosen time.",
+              },
+              {
+                step: "03",
+                title: "Returned Clean & Fresh",
+                desc: "Your clothes arrive back clean, ironed, and ready to wear.",
+              },
+            ].map((p) => (
+              <div
+                key={p.step}
+                className="p-6 sm:p-8 bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-xl hover:-translate-y-1.5 hover:border-sky-400/40 transition-all duration-300 space-y-3"
+              >
+                <span className="text-2xl font-black text-sky-600 dark:text-sky-400 font-mono">
+                  {p.step}
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-foreground">{p.title}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Customer Review - Translucent Glass Card */}
+        <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center">
+          <div className="p-7 sm:p-10 rounded-3xl bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 shadow-xl space-y-3">
+            <blockquote className="text-lg sm:text-2xl font-serif italic text-foreground leading-snug">
+              “No need to waste hours washing clothes by hand in the hostel. They come to pick up
+              right from my hall gate and bring them back clean and ironed!”
+            </blockquote>
+            <p className="text-xs font-bold text-foreground">Bernard A. · Unity Hall, KNUST</p>
+          </div>
+        </section>
+
+        {/* Frequently Asked Questions Section - Glass Container */}
+        <section id="faq" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto space-y-2.5 mb-10">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 border border-sky-400/20 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider">
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Questions & Answers</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
+              Frequently Asked <span className="text-primary italic font-serif">Questions</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Simple answers to everything you need to know before handing your clothes to our
+              rider.
             </p>
-            <p>
-              <Phone />
-              0532331150 · 0243140855
-            </p>
-            <p>
-              <Clock3 />
-              24-hour turnaround available
-            </p>
+          </div>
+
+          <div className="bg-white/45 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl p-4 sm:p-7 shadow-2xl">
+            <Accordion
+              type="single"
+              collapsible
+              defaultValue="item-0"
+              className="w-full space-y-2.5"
+            >
+              {faqs.map((faq, index) => (
+                <AccordionItem
+                  key={index}
+                  value={`item-${index}`}
+                  className="border border-white/30 dark:border-white/10 rounded-2xl px-4 py-1 bg-white/20 dark:bg-white/5 backdrop-blur-xl hover:bg-white/35 transition-colors"
+                >
+                  <AccordionTrigger className="text-xs sm:text-sm font-bold text-foreground hover:no-underline py-3 text-left">
+                    {faq.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-xs sm:text-sm text-muted-foreground leading-relaxed pt-1 pb-3">
+                    {faq.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </section>
+
+        {/* Ready to Book / Contact Footer Section - Glass Box */}
+        <section id="contact" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+          <div className="p-7 sm:p-12 rounded-3xl bg-white/45 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 shadow-2xl text-center space-y-6">
+            <div className="space-y-2 max-w-xl mx-auto">
+              <span className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
+                Doorstep Laundry in Kumasi
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground">
+                Let Us Wash Your Clothes{" "}
+                <span className="text-primary italic font-serif">For You</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Book a pickup in 30 seconds. Pay only when your clothes are clean.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button
+                onClick={handleBookingTrigger}
+                className="h-12 sm:h-13 px-8 rounded-2xl text-xs sm:text-sm font-extrabold shadow-lg gap-2 w-full sm:w-auto bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/30"
+              >
+                <span>Book a Doorstep Pickup</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+
+              <a
+                href="tel:0532331150"
+                className="h-12 sm:h-13 px-6 rounded-2xl bg-white/30 dark:bg-white/10 backdrop-blur-xl border border-white/30 text-foreground text-xs font-bold flex items-center justify-center gap-2 hover:bg-white/50 transition-all shadow-xs w-full sm:w-auto"
+              >
+                <Phone className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                <span>Call Rider: 053 233 1150</span>
+              </a>
+            </div>
           </div>
         </section>
       </main>
 
-      <footer className="site-footer">
-        <a className="site-brand footer-brand" href="#top">
-          <img src={brandLogo} alt="Affordable Laundry" />
-          <span>
-            <strong>Affordable Laundry</strong>
-            <small>Clean clothes · Fresh start</small>
-          </span>
-        </a>
-        <p>Premium garment care and pickup around KNUST, Kumasi.</p>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => toast("Instagram page demo opened.")}
-          aria-label="Instagram"
-        >
-          <Instagram />
-        </Button>
-        <small>© 2026 Affordable Laundry Service</small>
+      {/* Modern Footer */}
+      <footer className="border-t border-border bg-card/60 backdrop-blur-xl py-10 px-4 sm:px-6 lg:px-8 text-center text-xs text-muted-foreground space-y-3">
+        <div className="flex items-center justify-center gap-2 font-bold text-foreground">
+          <img src={brandIcon} alt="Icon" className="w-6 h-6 rounded-lg" />
+          <span>Affordable Laundry Kumasi</span>
+        </div>
+        <p>© 2026 Affordable Laundry Service. Clean Clothes & Fast Pickup in KNUST, Kumasi.</p>
       </footer>
 
-      {bookingOpen ? (
+      {/* Floating Mobile Bottom Navigation Bar - Ultra Transparent Glass */}
+      <div className="md:hidden fixed bottom-3 inset-x-3 z-40 bg-white/40 dark:bg-black/60 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-2xl p-2 flex items-center justify-around">
+        <button
+          onClick={handleBookingTrigger}
+          className="flex flex-col items-center gap-1 p-1.5 text-[10px] font-bold text-primary"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Book</span>
+        </button>
+
+        <button
+          onClick={() => scrollToSection("pricing")}
+          className="flex flex-col items-center gap-1 p-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground"
+        >
+          <Shirt className="w-4 h-4" />
+          <span>Prices</span>
+        </button>
+
+        <button
+          onClick={() => scrollToSection("location")}
+          className="flex flex-col items-center gap-1 p-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground"
+        >
+          <Navigation className="w-4 h-4" />
+          <span>Map</span>
+        </button>
+
+        <button
+          onClick={() => {
+            if (user) {
+              handleNavigateToDashboard();
+            } else {
+              setAuthModalOpen(true);
+            }
+          }}
+          className="flex flex-col items-center gap-1 p-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground"
+        >
+          {isAdmin ? (
+            <Shield className="w-4 h-4 text-sky-500" />
+          ) : (
+            <LayoutDashboard className="w-4 h-4" />
+          )}
+          <span>{user ? (isAdmin ? "Admin" : "Portal") : "Sign In"}</span>
+        </button>
+      </div>
+
+      {/* Booking Drawer with Places Autocomplete & Glassmorphism */}
+      {bookingOpen && (
         <div
-          className="booking-overlay"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setBookingOpen(false);
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-in fade-in"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setBookingOpen(false);
           }}
         >
-          <aside
-            className="booking-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Book a laundry collection"
-          >
-            <div className="drawer-header">
+          <div className="relative w-full max-w-lg bg-card/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl p-5 sm:p-8 max-h-[92vh] overflow-y-auto space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-3">
                 <img
                   src={brandIcon}
                   alt="Affordable Laundry"
-                  className="w-11 h-11 rounded-full object-cover border border-primary/20 shadow-xs"
+                  className="w-10 h-10 rounded-2xl object-cover border border-primary/20"
                 />
                 <div>
-                  <p className="section-kicker">Your collection</p>
-                  <h2>{bookingComplete ? "Booking confirmed" : "Book garment care"}</h2>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                    Easy Booking
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-black text-foreground">
+                    {bookingComplete ? "Pickup Booked!" : "Book Clothes Pickup"}
+                  </h3>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
                 onClick={() => setBookingOpen(false)}
-                aria-label="Close booking"
+                className="p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
+                aria-label="Close booking popup"
               >
-                <X />
-              </Button>
+                <X className="w-5 h-5" />
+              </button>
             </div>
+
             {bookingComplete && latestBooking ? (
-              <div className="booking-success">
-                <span>
-                  <Check />
-                </span>
-                <h3>You’re all set.</h3>
-                <p>
-                  Collection <strong>#{latestBooking.id}</strong> is scheduled for{" "}
-                  {latestBooking.date}. We’ll call before pickup.
-                </p>
-                <div>
-                  <small>Collection total</small>
-                  <strong>GHC {latestBooking.total}</strong>
+              <div className="text-center py-4 space-y-4">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Check className="w-8 h-8" />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                  <Button onClick={() => setBookingOpen(false)}>Done</Button>
+                <div>
+                  <h4 className="text-lg font-bold text-foreground">You’re All Set!</h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Pickup <strong>#{latestBooking.id}</strong> has been booked for{" "}
+                    <strong>{latestBooking.date}</strong> at{" "}
+                    <strong>{latestBooking.location}</strong>. Our rider will call your phone before
+                    arriving.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-muted/40 border border-border text-xs flex justify-between font-bold">
+                  <span>Total to Pay:</span>
+                  <span className="text-primary text-base">GHC {latestBooking.total}</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                  <Button
+                    onClick={() => setBookingOpen(false)}
+                    className="w-full rounded-2xl text-xs font-bold h-11"
+                  >
+                    Done
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => {
                       setBookingOpen(false);
-                      setSelectedTrackerOrder(latestBooking.id);
-                      scrollToSection("tracker");
+                      if (user) {
+                        handleNavigateToDashboard();
+                      } else {
+                        setAuthModalOpen(true);
+                      }
                     }}
-                    className="flex items-center gap-1.5"
+                    className="w-full rounded-2xl text-xs font-bold h-11"
                   >
-                    Track Order #{latestBooking.id}
-                    <ArrowRight className="w-4 h-4 ml-1" />
+                    See Order in Dashboard
                   </Button>
                 </div>
               </div>
             ) : (
-              <form className="booking-form" onSubmit={submitBooking}>
-                <div className="booking-summary">
-                  <span>
-                    {itemCount} {itemCount === 1 ? "item" : "items"}
-                  </span>
-                  <strong>GHC {total}</strong>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setBookingOpen(false);
-                      scrollToSection("pricing");
-                    }}
-                  >
-                    Edit items
-                    <ChevronDown />
-                  </Button>
+              <form onSubmit={submitBooking} className="space-y-4 text-xs">
+                {/* Garments Quick Counter */}
+                <div className="space-y-2">
+                  <div className="flex justify-between font-bold text-foreground">
+                    <span>
+                      Selected Clothes ({itemCount} {itemCount === 1 ? "piece" : "pieces"})
+                    </span>
+                    <span className="text-primary text-sm">Total: GHC {total}</span>
+                  </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    {laundryItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border border-border"
+                      >
+                        <div>
+                          <span className="font-bold text-foreground block">{item.name}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            GHC {item.price} each
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => changeQuantity(item.id, -1)}
+                            className="w-6 h-6 rounded-md bg-card border border-border font-bold text-xs"
+                          >
+                            -
+                          </button>
+                          <span className="w-5 text-center font-bold">
+                            {quantities[item.id] ?? 0}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => changeQuantity(item.id, 1)}
+                            className="w-6 h-6 rounded-md bg-card border border-border font-bold text-xs"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <label>
-                  Full name
-                  <input name="name" required maxLength={80} placeholder="Your name" />
-                </label>
-                <label>
-                  Phone number
-                  <input
-                    name="phone"
+
+                {/* Contact Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-foreground mb-1">Your Name</label>
+                    <input
+                      name="name"
+                      required
+                      defaultValue={profile?.displayName || user?.displayName || ""}
+                      placeholder="e.g. Kwame Mensah"
+                      className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-foreground mb-1">Phone Number</label>
+                    <input
+                      name="phone"
+                      required
+                      type="tel"
+                      defaultValue={profile?.phone || ""}
+                      placeholder="053 233 1150"
+                      className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+
+                {/* Google Places Autocomplete Pickup Location Input */}
+                <div>
+                  <label className="block font-bold text-foreground mb-1">
+                    Pickup Location (Hall, Hostel, or Address)
+                  </label>
+                  <PlacesAutocomplete
+                    name="location"
                     required
-                    inputMode="tel"
-                    minLength={9}
-                    maxLength={18}
-                    placeholder="053 233 1150"
+                    value={typedLocation}
+                    onChange={(val) => setTypedLocation(val)}
+                    placeholder="Type hall, hostel, or room (e.g. Unity Hall Rm 24)"
                   />
-                </label>
-                <label>
-                  Pickup location
-                  <select name="location" required defaultValue="">
-                    <option value="" disabled>
-                      Select your area
-                    </option>
-                    <option>KNUST campus</option>
-                    <option>Gyinyase</option>
-                    <option>Ayeduase</option>
-                    <option>Outside KNUST</option>
-                  </select>
-                </label>
-                <label>
-                  Pickup date
-                  <input name="date" type="date" required />
-                </label>
-                <p className="booking-note">
-                  <Check />
-                  Free pickup and delivery within KNUST. We confirm fees for other locations before
-                  collection.
-                </p>
-                <Button type="submit" className="drawer-submit">
-                  Confirm collection · GHC {total}
-                  <ArrowRight />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-foreground mb-1">Pickup Date</label>
+                  <input
+                    name="date"
+                    type="date"
+                    required
+                    defaultValue={new Date().toISOString().split("T")[0]}
+                    className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 text-xs text-primary font-medium flex items-center gap-2">
+                  <Check className="w-4 h-4 shrink-0 text-emerald-500" />
+                  <span>
+                    Free pickup and delivery in KNUST. Our rider will call your phone when coming.
+                  </span>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 rounded-2xl text-xs font-extrabold shadow-lg bg-sky-500 hover:bg-sky-400 text-white transition-all hover:scale-[1.02] active:scale-98"
+                >
+                  {!user ? "Sign In & Confirm Pickup" : `Confirm Pickup · GHC ${total}`}
                 </Button>
-                <small className="demo-copy">
-                  Frontend demonstration only. No payment is collected.
-                </small>
               </form>
             )}
-          </aside>
+          </div>
         </div>
-      ) : null}
+      )}
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => {
+          setAuthModalOpen(false);
+          setPendingOpenBookingAfterAuth(false);
+        }}
+        onSuccess={() => {
+          if (pendingOpenBookingAfterAuth) {
+            setPendingOpenBookingAfterAuth(false);
+            openBooking();
+          } else {
+            handleNavigateToDashboard();
+          }
+        }}
+      />
     </div>
   );
 }

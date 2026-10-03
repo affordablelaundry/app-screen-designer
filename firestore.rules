@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'affordablelaundry424@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) && isOwner(userId) &&
+        request.resource.data.id == request.auth.uid &&
+        (request.resource.data.role == 'customer' || isAdmin());
+      allow update: if isValidId(userId) && (
+        (isOwner(userId) && request.resource.data.id == resource.data.id && request.resource.data.role == resource.data.role) ||
+        isAdmin()
+      );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // Orders collection
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && (
+        isAdmin() ||
+        (isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.customerEmail == request.auth.token.email)) ||
+        resource.data.id == orderId
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.customerEmail == request.auth.token.email
+      );
+      allow create: if isValidId(orderId) && isSignedIn() &&
+        (request.resource.data.userId == request.auth.uid || request.resource.data.customerEmail == request.auth.token.email) &&
+        request.resource.data.total is number &&
+        request.resource.data.total >= 0 &&
+        request.resource.data.status is string;
+      allow update: if isValidId(orderId) && (
+        isAdmin() ||
+        (
+          isSignedIn() &&
+          (resource.data.userId == request.auth.uid || resource.data.customerEmail == request.auth.token.email)
+        )
+      );
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    // Admins allowlist collection
+    match /admins/{adminId} {
+      allow read: if isValidId(adminId) && isAdmin();
+      allow write: if isValidId(adminId) && isAdmin();
+    }
+  }
+}

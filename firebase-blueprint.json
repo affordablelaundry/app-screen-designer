@@ -1,0 +1,173 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered user profile and role",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User UID"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Full customer name",
+          "maxLength": 100
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number",
+          "maxLength": 25
+        },
+        "role": {
+          "type": "string",
+          "description": "Access role",
+          "enum": ["customer", "admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of registration"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last profile update"
+        }
+      },
+      "required": ["id", "email", "role", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Laundry collection and delivery order",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Human-readable order tracking ID",
+          "maxLength": 32
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the customer who placed the order"
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Customer name",
+          "maxLength": 100
+        },
+        "customerEmail": {
+          "type": "string",
+          "format": "email",
+          "description": "Customer email"
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Customer contact number",
+          "maxLength": 25
+        },
+        "location": {
+          "type": "string",
+          "description": "Pickup and dropoff location",
+          "maxLength": 200
+        },
+        "pickupDate": {
+          "type": "string",
+          "description": "Selected pickup date"
+        },
+        "items": {
+          "type": "object",
+          "description": "Quantities of laundry items"
+        },
+        "itemCount": {
+          "type": "number",
+          "description": "Total garment count"
+        },
+        "total": {
+          "type": "number",
+          "description": "Total order amount in GHC"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current lifecycle status of laundry",
+          "enum": [
+            "COLLECTION_SCHEDULED",
+            "ITEMS_RECEIVED",
+            "WASHING",
+            "READY_FOR_PICKUP",
+            "DELIVERY_ON_THE_WAY",
+            "COMPLETED",
+            "CANCELLED"
+          ]
+        },
+        "stageNotes": {
+          "type": "string",
+          "description": "Status or inspection update notes",
+          "maxLength": 500
+        },
+        "riderName": {
+          "type": "string",
+          "description": "Assigned courier or dispatch rider",
+          "maxLength": 100
+        },
+        "riderPhone": {
+          "type": "string",
+          "description": "Courier phone number",
+          "maxLength": 25
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of placement"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "customerName",
+        "customerPhone",
+        "location",
+        "total",
+        "status",
+        "createdAt"
+      ]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Privileged administrator record",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Admin email address"
+        },
+        "addedAt": {
+          "type": "string",
+          "description": "Timestamp added"
+        }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile with personal contact and role information"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Laundry booking orders with customer details, item quantities, and real-time tracking stages"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Allowlisted administrators"
+    }
+  }
+}

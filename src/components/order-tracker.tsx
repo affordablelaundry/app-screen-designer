@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, type FormEvent } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import {
   Search,
   CheckCircle2,
   Clock,
   Truck,
-  Sparkles,
+  Shirt,
   Package,
   WashingMachine,
   MapPin,
@@ -14,7 +15,9 @@ import {
   ArrowRight,
   ShieldCheck,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
+import { db } from "@/lib/firebase";
 import brandIcon from "@/assets/affordable-laundry-icon.jpg";
 import { Button } from "@/components/ui/button";
 
@@ -45,38 +48,38 @@ const STAGES: {
 }[] = [
   {
     key: "confirmed",
-    label: "Order Confirmed",
-    sublabel: "Collection scheduled with dispatch",
+    label: "Order Booked",
+    sublabel: "We got your pickup request",
     icon: CheckCircle2,
   },
   {
     key: "picked_up",
     label: "Picked Up",
-    sublabel: "Collected from your doorstep",
+    sublabel: "Rider has your clothes",
     icon: Package,
   },
   {
     key: "washing",
-    label: "Washing & Care",
-    sublabel: "Eco-detergent wash & gentle stain care",
+    label: "Washing Clothes",
+    sublabel: "Washing your clothes clean and fresh",
     icon: WashingMachine,
   },
   {
     key: "pressing",
-    label: "Steam Press & Fold",
-    sublabel: "Quality inspection and neat packaging",
-    icon: Sparkles,
+    label: "Ironed & Packed",
+    sublabel: "Ironed smooth and neatly folded",
+    icon: Shirt,
   },
   {
     key: "out_for_delivery",
-    label: "Out for Delivery",
-    sublabel: "Rider is heading to your address",
+    label: "Rider on the Way",
+    sublabel: "Rider is coming to your door",
     icon: Truck,
   },
   {
     key: "delivered",
-    label: "Delivered Fresh",
-    sublabel: "Completed & handed over to customer",
+    label: "Delivered",
+    sublabel: "Brought back clean to you",
     icon: ShieldCheck,
   },
 ];
@@ -131,29 +134,54 @@ const DEFAULT_ORDERS: TrackedOrder[] = [
 
 const STORAGE_ORDERS_KEY = "affordable-laundry-tracked-orders";
 
+function mapFirestoreStatusToStage(status: string): OrderStatusStage {
+  switch (status) {
+    case "ITEMS_RECEIVED":
+      return "picked_up";
+    case "WASHING":
+      return "washing";
+    case "READY_FOR_PICKUP":
+      return "pressing";
+    case "DELIVERY_ON_THE_WAY":
+      return "out_for_delivery";
+    case "COMPLETED":
+      return "delivered";
+    case "COLLECTION_SCHEDULED":
+    default:
+      return "confirmed";
+  }
+}
+
 interface OrderTrackerProps {
   onOpenBooking: () => void;
   selectedOrderId?: string;
 }
 
 export function OrderTracker({ onOpenBooking, selectedOrderId }: OrderTrackerProps) {
-  const [orders, setOrders] = useState<TrackedOrder[]>(() => {
-    if (typeof window === "undefined") return DEFAULT_ORDERS;
-    try {
-      const stored = window.localStorage.getItem(STORAGE_ORDERS_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as TrackedOrder[];
-        return parsed.length > 0 ? parsed : DEFAULT_ORDERS;
-      }
-    } catch {
-      // fallback
-    }
-    return DEFAULT_ORDERS;
-  });
+  const [orders, setOrders] = useState<TrackedOrder[]>(DEFAULT_ORDERS);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState(selectedOrderId || "AL-84920");
   const [activeOrderId, setActiveOrderId] = useState<string>(selectedOrderId || "AL-84920");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [searchingRemote, setSearchingRemote] = useState(false);
+
+  // Load from localStorage on client after mount (prevents SSR hydration mismatch)
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(STORAGE_ORDERS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as TrackedOrder[];
+        if (parsed.length > 0) {
+          setOrders(parsed);
+        }
+      }
+    } catch {
+      // fallback
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
 
   // Sync if selectedOrderId prop changes from booking flow or hero click
   useEffect(() => {
@@ -164,12 +192,12 @@ export function OrderTracker({ onOpenBooking, selectedOrderId }: OrderTrackerPro
     }
   }, [selectedOrderId]);
 
-  // Persist orders on state change
+  // Persist orders on state change after initial load
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (isLoaded && typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(orders));
     }
-  }, [orders]);
+  }, [orders, isLoaded]);
 
   const activeOrder = useMemo(() => {
     if (!activeOrderId) return null;
@@ -190,15 +218,15 @@ export function OrderTracker({ onOpenBooking, selectedOrderId }: OrderTrackerPro
     return STAGES.findIndex((s) => s.key === activeOrder.stage);
   }, [activeOrder]);
 
-  const handleSearch = (e: FormEvent) => {
+  const handleSearch = async (e: FormEvent) => {
     e.preventDefault();
-    const query = searchQuery.trim();
-    if (!query) {
+    const queryStr = searchQuery.trim();
+    if (!queryStr) {
       setErrorMessage("Please enter an Order ID.");
       return;
     }
 
-    const cleanQuery = query.toUpperCase().replace(/\s+/g, "");
+    const cleanQuery = queryStr.toUpperCase().replace(/\s+/g, "");
     const found = orders.find((o) => {
       const oClean = o.id.toUpperCase().replace(/\s+/g, "");
       return (
@@ -210,10 +238,47 @@ export function OrderTracker({ onOpenBooking, selectedOrderId }: OrderTrackerPro
     if (found) {
       setActiveOrderId(found.id);
       setErrorMessage(null);
-    } else {
-      setErrorMessage(
-        `Order "${query}" was not found. Please verify the ID or choose one of the sample orders below.`,
-      );
+      return;
+    }
+
+    // Try fetching from Firestore
+    setSearchingRemote(true);
+    try {
+      const ordersRef = collection(db, "orders");
+      const q = query(ordersRef, where("id", "==", queryStr.toUpperCase()));
+      const snap = await getDocs(q);
+
+      if (!snap.empty) {
+        const docData = snap.docs[0].data();
+        const firestoreOrder: TrackedOrder = {
+          id: docData.id,
+          customer: docData.customerName || "Customer",
+          phone: docData.customerPhone || "",
+          location: docData.location || "KNUST Campus",
+          date: docData.pickupDate || "Scheduled",
+          items: docData.items || {},
+          total: docData.total || 0,
+          stage: mapFirestoreStatusToStage(docData.status),
+          riderName: docData.riderName || "Affordable Laundry Dispatch",
+          riderPhone: docData.riderPhone || "053 233 1150",
+          createdAt: docData.createdAt || "Recent",
+          estimatedDelivery: docData.status === "COMPLETED" ? "Delivered" : "Within 24 hours",
+          notes: docData.stageNotes || "Order active in laundry processing",
+        };
+
+        setOrders((prev) => [firestoreOrder, ...prev.filter((o) => o.id !== firestoreOrder.id)]);
+        setActiveOrderId(firestoreOrder.id);
+        setErrorMessage(null);
+      } else {
+        setErrorMessage(
+          `Order "${queryStr}" was not found. Please verify the ID or choose one of the sample orders below.`,
+        );
+      }
+    } catch (err) {
+      console.error("Firestore lookup error:", err);
+      setErrorMessage(`Order "${queryStr}" was not found.`);
+    } finally {
+      setSearchingRemote(false);
     }
   };
 
@@ -276,9 +341,18 @@ export function OrderTracker({ onOpenBooking, selectedOrderId }: OrderTrackerPro
                 className="tracker-input"
               />
             </div>
-            <Button type="submit" className="tracker-submit-btn">
-              Track Order
-              <ArrowRight className="w-4 h-4 ml-1" />
+            <Button type="submit" disabled={searchingRemote} className="tracker-submit-btn">
+              {searchingRemote ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  Track Order
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </>
+              )}
             </Button>
           </form>
 
