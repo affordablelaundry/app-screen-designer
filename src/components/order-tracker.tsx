@@ -54,8 +54,8 @@ const STAGES: {
   },
   {
     key: "picked_up",
-    label: "Picked Up",
-    sublabel: "Rider has your clothes",
+    label: "Clothes Received",
+    sublabel: "Atelier received your clothes",
     icon: Package,
   },
   {

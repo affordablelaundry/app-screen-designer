@@ -327,8 +327,6 @@
   height: 7px;
   border-radius: 50%;
   background: var(--sky);
-  box-shadow: 0 0 0 5px color-mix(in oklab, var(--sky) 15%, transparent);
-  animation: pulse-dot 2s infinite;
 }
 .status-heading svg {
   width: 1.1rem;

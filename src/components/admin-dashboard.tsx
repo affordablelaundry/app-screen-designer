@@ -43,6 +43,14 @@ import brandIcon from "@/assets/affordable-laundry-icon.jpg";
 import { toast } from "sonner";
 import { handleFirestoreError, OperationType } from "@/lib/firestore-error";
 import { NotificationCenter } from "@/components/notification-center";
+import {
+  broadcastOrderEvent,
+  getStatusFriendlyText,
+  getStatusCustomerMessage,
+  playNotificationChime,
+  triggerDeviceNotification,
+  setupAdminOrderNotifications,
+} from "@/lib/order-notifications";
 
 export type OrderRecord = {
   id: string;
@@ -83,7 +91,7 @@ const STATUS_OPTIONS: {
   },
   {
     value: "ITEMS_RECEIVED",
-    label: "Clothes Picked Up",
+    label: "Clothes Received",
     badge: "bg-indigo-500/10 text-indigo-600 border-indigo-500/30",
   },
   {
@@ -112,6 +120,39 @@ const STATUS_OPTIONS: {
     badge: "bg-destructive/10 text-destructive border-destructive/30",
   },
 ];
+
+const NEXT_STAGE_MAP: Record<
+  OrderRecord["status"],
+  { next: OrderRecord["status"]; label: string; btnClass: string } | null
+> = {
+  COLLECTION_SCHEDULED: {
+    next: "ITEMS_RECEIVED",
+    label: "Clothes Received",
+    btnClass: "bg-indigo-600 hover:bg-indigo-700 text-white",
+  },
+  ITEMS_RECEIVED: {
+    next: "WASHING",
+    label: "Washing Clothes",
+    btnClass: "bg-cyan-600 hover:bg-cyan-700 text-white",
+  },
+  WASHING: {
+    next: "READY_FOR_PICKUP",
+    label: "Ready for Delivery",
+    btnClass: "bg-sky-600 hover:bg-sky-700 text-white",
+  },
+  READY_FOR_PICKUP: {
+    next: "DELIVERY_ON_THE_WAY",
+    label: "Courier Out for Delivery",
+    btnClass: "bg-purple-600 hover:bg-purple-700 text-white",
+  },
+  DELIVERY_ON_THE_WAY: {
+    next: "COMPLETED",
+    label: "Mark Delivered",
+    btnClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
+  },
+  COMPLETED: null,
+  CANCELLED: null,
+};
 
 interface AdminDashboardProps {
   onBackToLanding: () => void;
@@ -211,6 +252,26 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
     return () => unsubscribe();
   }, [isAdmin]);
 
+  // Real-time listener: Pop up notification every time a customer books
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const unsubAdminNotif = setupAdminOrderNotifications((booking) => {
+      toast.info(
+        `🔔 New Customer Booking! Order #${booking.orderId} - ${booking.customerName} booked ${booking.itemCount} item(s) at ${booking.location}.`,
+        {
+          duration: 10000,
+          action: {
+            label: "Filter Order",
+            onClick: () => setSearch(booking.orderId),
+          },
+        },
+      );
+    });
+
+    return () => unsubAdminNotif();
+  }, [isAdmin]);
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6 text-center">
@@ -260,11 +321,51 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
   const handleSingleStatusChange = async (docId: string, newStatus: OrderRecord["status"]) => {
     try {
       const orderRef = doc(db, "orders", docId);
+      const targetOrder = orders.find((o) => o.docId === docId || o.id === docId);
+      const orderDisplayId = targetOrder?.id || docId;
+      const stageMsg = getStatusCustomerMessage(newStatus, orderDisplayId);
+
       await updateDoc(orderRef, {
         status: newStatus,
+        stageNotes: stageMsg.body,
         updatedAt: new Date().toISOString(),
       });
-      toast.success(`Order updated to ${newStatus.replace(/_/g, " ")}`);
+
+      // Broadcast immediately so customer device / browser gets pop-up notification
+      broadcastOrderEvent({
+        type: "STATUS_UPDATE",
+        orderId: orderDisplayId,
+        status: newStatus,
+        userId: targetOrder?.userId,
+        customerEmail: targetOrder?.customerEmail,
+        customerName: targetOrder?.customerName,
+        stageNotes: stageMsg.body,
+      });
+
+      // Update local cache
+      try {
+        const raw = localStorage.getItem("al_orders_cache");
+        if (raw) {
+          const list = JSON.parse(raw) as OrderRecord[];
+          const updated = list.map((item) =>
+            item.id === orderDisplayId
+              ? {
+                  ...item,
+                  status: newStatus,
+                  stageNotes: stageMsg.body,
+                  updatedAt: new Date().toISOString(),
+                }
+              : item,
+          );
+          localStorage.setItem("al_orders_cache", JSON.stringify(updated));
+        }
+      } catch {
+        // ignore
+      }
+
+      toast.success(
+        `Order #${orderDisplayId} updated: ${getStatusFriendlyText(newStatus)}! Customer notified.`,
+      );
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `orders/${docId}`, user);
     }
@@ -281,14 +382,31 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
       const batch = writeBatch(db);
       selectedIds.forEach((docId) => {
         const orderRef = doc(db, "orders", docId);
+        const targetOrder = orders.find((o) => o.docId === docId || o.id === docId);
+        const orderDisplayId = targetOrder?.id || docId;
+        const stageMsg = getStatusCustomerMessage(bulkStatus, orderDisplayId);
+
         batch.update(orderRef, {
           status: bulkStatus,
+          stageNotes: stageMsg.body,
           updatedAt: new Date().toISOString(),
+        });
+
+        broadcastOrderEvent({
+          type: "STATUS_UPDATE",
+          orderId: orderDisplayId,
+          status: bulkStatus,
+          userId: targetOrder?.userId,
+          customerEmail: targetOrder?.customerEmail,
+          customerName: targetOrder?.customerName,
+          stageNotes: stageMsg.body,
         });
       });
 
       await batch.commit();
-      toast.success(`Updated ${selectedIds.size} orders to ${bulkStatus.replace(/_/g, " ")}!`);
+      toast.success(
+        `Updated ${selectedIds.size} orders to ${getStatusFriendlyText(bulkStatus)}! Customers notified.`,
+      );
       setSelectedIds(new Set());
     } catch (err) {
       toast.error("Failed to update bulk orders.");
@@ -436,8 +554,7 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
                 alt="Affordable Laundry"
                 className="w-10 h-10 rounded-2xl object-cover border border-sky-400/40 shadow-xs"
               />
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-sky-400 border-2 border-background animate-ping opacity-75" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-sky-500 border-2 border-background" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-background" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -541,7 +658,6 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
           </div>
 
           <div className="p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden col-span-2 md:col-span-1">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
             <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
               Total Revenue
             </span>
@@ -712,8 +828,25 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
                       </div>
                     </div>
 
-                    {/* Stage Switcher Dropdown & Edit Button */}
-                    <div className="flex items-center gap-2 self-end lg:self-center">
+                    {/* Stage Switcher Dropdown, One-Click Advance Button & Notes */}
+                    <div className="flex flex-wrap items-center gap-2 self-end lg:self-center">
+                      {NEXT_STAGE_MAP[order.status] && (
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            handleSingleStatusChange(
+                              order.docId,
+                              NEXT_STAGE_MAP[order.status]!.next,
+                            )
+                          }
+                          className={`rounded-2xl text-xs font-extrabold h-10 px-3.5 shadow-sm gap-1.5 transition-transform hover:scale-105 active:scale-95 ${NEXT_STAGE_MAP[order.status]!.btnClass}`}
+                          title={`Advance to ${NEXT_STAGE_MAP[order.status]!.label} and notify customer`}
+                        >
+                          <span>{NEXT_STAGE_MAP[order.status]!.label}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+
                       <select
                         value={order.status}
                         onChange={(e) =>
@@ -723,6 +856,7 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
                           )
                         }
                         className="h-10 px-3 rounded-2xl border border-white/30 bg-white/40 dark:bg-white/10 backdrop-blur-xl text-xs font-bold text-foreground focus:ring-2 focus:ring-sky-500/20"
+                        title="Set exact order stage"
                       >
                         {STATUS_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>

@@ -42,8 +42,13 @@ import {
 } from "@/components/ui/accordion";
 import {
   setupDeviceOrderNotifications,
+  setupAdminOrderNotifications,
+  setupCustomerOrderNotifications,
   addTrackedOrderId,
   triggerDeviceNotification,
+  broadcastOrderEvent,
+  playNotificationChime,
+  getStatusFriendlyText,
 } from "@/lib/order-notifications";
 
 import heroAtelierImage from "@/assets/images/ghanaian_hero_1790975886532.jpg";
@@ -183,15 +188,41 @@ export function LaundryApp() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Setup background live notification watcher for orders tracked on this device
+  // Real-time live notification watchers:
+  // 1. Admin gets pop up notification whenever any customer books an order
+  // 2. Customer gets pop up notification whenever admin updates their order process
   useEffect(() => {
-    const unsub = setupDeviceOrderNotifications((orderId, newStatus, title, body) => {
-      toast.info(`${title}: ${body}`, {
-        duration: 8000,
+    if (isAdmin) {
+      const unsubAdmin = setupAdminOrderNotifications((booking) => {
+        toast.info(
+          `🔔 New Customer Booking! Order #${booking.orderId} from ${booking.customerName} - ${booking.itemCount} items at ${booking.location}.`,
+          {
+            duration: 10000,
+            action: {
+              label: "Open Dashboard",
+              onClick: () => handleNavigateToDashboard(),
+            },
+          },
+        );
       });
-    });
-    return () => unsub();
-  }, []);
+      return () => unsubAdmin();
+    } else {
+      const unsubCustomer = setupCustomerOrderNotifications(
+        { userId: user?.uid, email: user?.email || profile?.email || "" },
+        (orderId, newStatus, title, body) => {
+          toast.info(`👕 ${title}`, {
+            description: body,
+            duration: 9000,
+            action: {
+              label: "View Status",
+              onClick: () => handleNavigateToDashboard(),
+            },
+          });
+        },
+      );
+      return () => unsubCustomer();
+    }
+  }, [isAdmin, user?.uid, user?.email, profile?.email]);
 
   // Check if notification permission prompt is needed on new device
   const handleNavigateToDashboard = () => {
@@ -340,6 +371,19 @@ export function LaundryApp() {
       console.error("Error saving booking to Firestore:", e);
     }
 
+    // Broadcast new booking immediately so admin dashboard gets instant pop-up notification
+    broadcastOrderEvent({
+      type: "NEW_ORDER",
+      orderId: newBookingId,
+      customerName: customer,
+      customerEmail: cleanEmail,
+      userId: user?.uid || "",
+      itemCount,
+      total,
+      location,
+      status: "COLLECTION_SCHEDULED",
+    });
+
     // Persist into unified order cache (ensures manual & Google accounts share exact same data)
     try {
       const rawCache = window.localStorage.getItem("al_orders_cache");
@@ -437,8 +481,7 @@ export function LaundryApp() {
                 alt="Affordable Laundry"
                 className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover border border-sky-400/40 shadow-xs group-hover:scale-105 group-hover:rotate-1 transition-all duration-300"
               />
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-sky-400 border-2 border-background animate-ping opacity-75" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-sky-500 border-2 border-background" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-background" />
             </div>
             <div className="flex flex-col">
               <span
@@ -592,28 +635,25 @@ export function LaundryApp() {
           </div>
         </div>
 
-        {/* Mobile Dropdown Nav Menu - Ultra-transparent glass-like, dynamic & animated */}
+        {/* Mobile Dropdown Nav Menu - High-Contrast Solid Frosted Glass, 100% Visible & Legible */}
         {menuOpen && (
-          <div className="lg:hidden mx-3 sm:mx-4 mt-2 p-4 sm:p-5 rounded-3xl bg-white/35 dark:bg-black/55 backdrop-blur-3xl border border-white/50 dark:border-white/20 shadow-2xl space-y-3.5 animate-in fade-in zoom-in-95 slide-in-from-top-3 duration-300 ring-1 ring-white/30">
+          <div className="lg:hidden mx-3 sm:mx-4 mt-2 p-4 sm:p-5 rounded-3xl bg-slate-950/96 dark:bg-zinc-950/96 text-white backdrop-blur-3xl border border-white/25 dark:border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.6)] space-y-4 animate-in fade-in zoom-in-95 slide-in-from-top-3 duration-300 ring-1 ring-white/15">
             {/* Quick status bar inside mobile menu */}
-            <div className="flex items-center justify-between pb-2.5 border-b border-white/25 px-1">
+            <div className="flex items-center justify-between pb-3 border-b border-white/15 px-1">
               <div className="flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500" />
-                </span>
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                <span className="w-2 h-2 rounded-full bg-sky-400" />
+                <span className="text-xs font-black uppercase tracking-wider text-sky-400">
                   {user
-                    ? `Active Member · ${profile?.displayName || "Member"}`
-                    : "Fast KNUST Pickup"}
+                    ? `Active · ${profile?.displayName || user.displayName || "Valued Customer"}`
+                    : "Fast KNUST Campus Pickup"}
                 </span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/30 dark:bg-white/10 border border-white/25 text-muted-foreground">
-                Kumasi Campus
+              <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-white/15 border border-white/20 text-white tracking-wide">
+                Kumasi HQ
               </span>
             </div>
 
-            {/* Nav item links with rich icons, glass pill hover and active glowing sky dots */}
+            {/* Nav item links with rich high-contrast cards, vivid icons, and active state */}
             <div className="grid grid-cols-2 gap-2 pt-1">
               {navItems.map(({ label, id }) => {
                 const isActive = activeSection === id;
@@ -634,35 +674,35 @@ export function LaundryApp() {
                       scrollToSection(id);
                       setMenuOpen(false);
                     }}
-                    className={`flex items-center gap-2.5 py-3 px-3.5 rounded-2xl text-xs font-bold transition-all duration-300 text-left border ${
+                    className={`flex items-center gap-2.5 py-3 px-3.5 rounded-2xl text-xs font-extrabold transition-all duration-300 text-left border ${
                       isActive
-                        ? "bg-white/85 dark:bg-white/25 text-sky-700 dark:text-sky-300 border-sky-400/50 shadow-md shadow-sky-500/15 scale-[1.02]"
-                        : "bg-white/25 dark:bg-white/5 border-white/30 dark:border-white/10 text-foreground hover:bg-white/45 hover:border-sky-400/30 hover:scale-[1.02] active:scale-95"
+                        ? "bg-sky-500/30 text-white border-sky-400 shadow-md shadow-sky-500/25 scale-[1.02]"
+                        : "bg-white/10 border-white/15 text-white/90 hover:bg-white/20 hover:text-white hover:border-white/30 hover:scale-[1.02] active:scale-95"
                     }`}
                   >
                     <div
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
                         isActive
                           ? "bg-sky-500 text-white shadow-xs"
-                          : "bg-white/30 dark:bg-white/10 text-sky-600 dark:text-sky-300"
+                          : "bg-white/15 text-sky-400 border border-white/10"
                       }`}
                     >
-                      <ItemIcon className="w-3.5 h-3.5" />
+                      <ItemIcon className="w-4 h-4" />
                     </div>
-                    <span className="truncate">{label}</span>
+                    <span className="truncate text-white font-extrabold">{label}</span>
                   </button>
                 );
               })}
             </div>
 
             {/* Mobile Menu Action Buttons */}
-            <div className="pt-2.5 border-t border-white/25 flex flex-col gap-2">
+            <div className="pt-3 border-t border-white/15 flex flex-col gap-2.5">
               <Button
                 onClick={() => {
                   setMenuOpen(false);
                   handleBookingTrigger();
                 }}
-                className="w-full rounded-2xl text-xs font-black h-12 bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/25 gap-2 transition-transform hover:scale-[1.02] active:scale-98"
+                className="w-full rounded-2xl text-xs font-black h-12 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/30 gap-2 transition-all hover:scale-[1.02] active:scale-98 border border-white/20"
               >
                 <Plus className="w-4 h-4" />
                 <span>Book Doorstep Pickup (GHC 4/piece)</span>
@@ -677,10 +717,14 @@ export function LaundryApp() {
                       setMenuOpen(false);
                       handleNavigateToDashboard();
                     }}
-                    className="w-full rounded-2xl text-xs font-bold h-10 border-white/35 bg-white/30 hover:bg-white/45 backdrop-blur-xl text-foreground gap-1.5 shadow-2xs"
+                    className="w-full rounded-2xl text-xs font-extrabold h-11 border-white/25 bg-white/15 hover:bg-white/25 text-white gap-2 shadow-xs"
                   >
-                    <LayoutDashboard className="w-3.5 h-3.5 text-sky-500" />
-                    <span>{isAdmin ? "Admin HQ" : "Dashboard"}</span>
+                    {isAdmin ? (
+                      <Shield className="w-4 h-4 text-sky-400" />
+                    ) : (
+                      <LayoutDashboard className="w-4 h-4 text-sky-400" />
+                    )}
+                    <span>{isAdmin ? "Admin HQ" : "My Dashboard"}</span>
                   </Button>
                   <Button
                     variant="ghost"
@@ -688,7 +732,7 @@ export function LaundryApp() {
                       setMenuOpen(false);
                       logout();
                     }}
-                    className="w-full rounded-2xl text-xs font-bold h-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="w-full rounded-2xl text-xs font-bold h-11 text-red-300 hover:text-red-200 hover:bg-red-500/20 border border-red-500/20"
                   >
                     Sign Out
                   </Button>
@@ -700,9 +744,9 @@ export function LaundryApp() {
                     setMenuOpen(false);
                     setAuthModalOpen(true);
                   }}
-                  className="w-full rounded-2xl text-xs font-bold h-10 border-white/35 bg-white/30 hover:bg-white/45 backdrop-blur-xl text-foreground gap-1.5 shadow-2xs"
+                  className="w-full rounded-2xl text-xs font-extrabold h-11 border-white/25 bg-white/15 hover:bg-white/25 text-white gap-2 shadow-xs"
                 >
-                  <LogIn className="w-3.5 h-3.5 text-sky-500" />
+                  <LogIn className="w-4 h-4 text-sky-400" />
                   <span>Sign In / Create Account</span>
                 </Button>
               )}
@@ -710,9 +754,9 @@ export function LaundryApp() {
               {/* Direct Call Rider Hotlink */}
               <a
                 href="tel:0532331150"
-                className="text-center text-[11px] font-bold text-muted-foreground hover:text-sky-500 transition-colors py-1 flex items-center justify-center gap-1.5"
+                className="text-center text-xs font-extrabold text-sky-300 hover:text-white transition-colors py-1.5 flex items-center justify-center gap-2 bg-white/5 rounded-xl border border-white/10"
               >
-                <Phone className="w-3 h-3 text-sky-500" />
+                <Phone className="w-3.5 h-3.5 text-sky-400" />
                 <span>Call Hotline Rider: 053 233 1150</span>
               </a>
             </div>
@@ -804,7 +848,7 @@ export function LaundryApp() {
             >
               <path
                 d="M0,0 C150,90 350,-40 500,60 C650,140 900,-30 1200,40 L1200,120 Z"
-                className="opacity-40 animate-pulse duration-1000"
+                className="opacity-40"
               />
               <path d="M0,25 C200,110 420,10 600,70 C800,130 1000,20 1200,65 L1200,120 L0,120 Z" />
             </svg>
@@ -1118,50 +1162,102 @@ export function LaundryApp() {
         <p>© 2026 Affordable Laundry Service. Clean Clothes & Fast Pickup in KNUST, Kumasi.</p>
       </footer>
 
-      {/* Floating Mobile Bottom Navigation Bar - Ultra Transparent Glass */}
-      <div className="md:hidden fixed bottom-3 inset-x-3 z-40 bg-white/40 dark:bg-black/60 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-2xl p-2 flex items-center justify-around">
-        <button
-          onClick={handleBookingTrigger}
-          className="flex flex-col items-center gap-1 p-1.5 text-[10px] font-bold text-primary"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Book</span>
-        </button>
+      {/* Floating Mobile Bottom Navigation Dock - Clean, High-Contrast & Legible */}
+      <nav
+        aria-label="Mobile Bottom Navigation Dock"
+        className="md:hidden fixed bottom-4 inset-x-3 max-w-sm mx-auto z-40"
+      >
+        <div className="relative bg-slate-950/95 dark:bg-black/95 backdrop-blur-2xl border border-white/20 shadow-2xl shadow-black/60 rounded-full p-1.5 px-2.5 flex items-center justify-between ring-1 ring-white/10">
+          {/* 1. Services Tab */}
+          <button
+            type="button"
+            onClick={() => scrollToSection("services")}
+            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-200 active:scale-95 ${
+              activeSection === "services"
+                ? "bg-white/15 text-sky-400 font-bold"
+                : "text-white/80 hover:text-white"
+            }`}
+          >
+            <WashingMachine className="w-4 h-4" />
+            <span className="text-[10px] font-bold tracking-tight mt-0.5">Services</span>
+            {activeSection === "services" && (
+              <span className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-sky-400" />
+            )}
+          </button>
 
-        <button
-          onClick={() => scrollToSection("pricing")}
-          className="flex flex-col items-center gap-1 p-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground"
-        >
-          <Shirt className="w-4 h-4" />
-          <span>Prices</span>
-        </button>
+          {/* 2. Prices Tab */}
+          <button
+            type="button"
+            onClick={() => scrollToSection("pricing")}
+            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-200 active:scale-95 ${
+              activeSection === "pricing"
+                ? "bg-white/15 text-sky-400 font-bold"
+                : "text-white/80 hover:text-white"
+            }`}
+          >
+            <Shirt className="w-4 h-4" />
+            <span className="text-[10px] font-bold tracking-tight mt-0.5">Prices</span>
+            {activeSection === "pricing" && (
+              <span className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-sky-400" />
+            )}
+          </button>
 
-        <button
-          onClick={() => scrollToSection("location")}
-          className="flex flex-col items-center gap-1 p-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground"
-        >
-          <Navigation className="w-4 h-4" />
-          <span>Map</span>
-        </button>
+          {/* 3. CENTER HERO: Clean "Book" Button */}
+          <button
+            type="button"
+            onClick={handleBookingTrigger}
+            className="group relative -my-1.5 px-4 py-2.5 rounded-full bg-sky-500 hover:bg-sky-400 text-white font-extrabold text-xs shadow-md shadow-sky-500/30 flex items-center gap-1.5 active:scale-95 transition-all duration-200 border border-white/30"
+          >
+            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+              <Plus className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="tracking-wide">Book</span>
+          </button>
 
-        <button
-          onClick={() => {
-            if (user) {
-              handleNavigateToDashboard();
-            } else {
-              setAuthModalOpen(true);
-            }
-          }}
-          className="flex flex-col items-center gap-1 p-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground"
-        >
-          {isAdmin ? (
-            <Shield className="w-4 h-4 text-sky-500" />
-          ) : (
-            <LayoutDashboard className="w-4 h-4" />
-          )}
-          <span>{user ? (isAdmin ? "Admin" : "Portal") : "Sign In"}</span>
-        </button>
-      </div>
+          {/* 4. Map Tab */}
+          <button
+            type="button"
+            onClick={() => scrollToSection("location")}
+            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-200 active:scale-95 ${
+              activeSection === "location"
+                ? "bg-white/15 text-sky-400 font-bold"
+                : "text-white/80 hover:text-white"
+            }`}
+          >
+            <Navigation className="w-4 h-4" />
+            <span className="text-[10px] font-bold tracking-tight mt-0.5">Map</span>
+            {activeSection === "location" && (
+              <span className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-sky-400" />
+            )}
+          </button>
+
+          {/* 5. Portal / Admin / Sign In Tab */}
+          <button
+            type="button"
+            onClick={() => {
+              if (user) {
+                handleNavigateToDashboard();
+              } else {
+                setAuthModalOpen(true);
+              }
+            }}
+            className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-full transition-all duration-200 active:scale-95 ${
+              user ? "text-sky-400 hover:text-sky-300 font-bold" : "text-white/80 hover:text-white"
+            }`}
+          >
+            {isAdmin ? (
+              <Shield className="w-4 h-4 text-sky-400" />
+            ) : user ? (
+              <LayoutDashboard className="w-4 h-4 text-sky-400" />
+            ) : (
+              <LogIn className="w-4 h-4" />
+            )}
+            <span className="text-[10px] font-bold tracking-tight mt-0.5">
+              {user ? (isAdmin ? "Admin" : "Portal") : "Sign In"}
+            </span>
+          </button>
+        </div>
+      </nav>
 
       {/* Booking Drawer with Places Autocomplete & Glassmorphism */}
       {bookingOpen && (

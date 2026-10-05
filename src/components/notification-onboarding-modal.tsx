@@ -72,7 +72,7 @@ export function NotificationOnboardingModal({
         {/* Floating Brand & Bell Icon */}
         <div className="relative mx-auto w-20 h-20">
           <div className="w-20 h-20 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-inner">
-            <BellRing className="w-10 h-10 animate-pulse text-primary" />
+            <BellRing className="w-10 h-10 text-primary" />
           </div>
           <img
             src={brandIcon}
@@ -90,7 +90,7 @@ export function NotificationOnboardingModal({
             Get Updates on This Phone
           </h3>
           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-            Turn on notifications so you know the exact moment your clothes are picked up, washed,
+            Turn on notifications so you know the exact moment your clothes are received, washed,
             and on the way back.
           </p>
         </div>

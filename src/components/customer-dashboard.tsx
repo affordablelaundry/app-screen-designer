@@ -59,19 +59,19 @@ const STATUS_METADATA: Record<
     step: 1,
   },
   ITEMS_RECEIVED: {
-    label: "Items Received",
+    label: "Clothes Received",
     color: "bg-indigo-500/10 text-indigo-600 border-indigo-500/30",
     icon: Package,
     step: 2,
   },
   WASHING: {
-    label: "Washing & Care",
+    label: "Washing Clothes",
     color: "bg-cyan-500/10 text-cyan-600 border-cyan-500/30",
     icon: WashingMachine,
     step: 3,
   },
   READY_FOR_PICKUP: {
-    label: "Ready for Pickup",
+    label: "Ready for Delivery",
     color: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30",
     icon: CheckCircle2,
     step: 4,

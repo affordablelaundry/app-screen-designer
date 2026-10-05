@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from "react";
+import { useState, useEffect, useMemo, useRef, type FormEvent } from "react";
 import { collection, query, where, onSnapshot, doc, setDoc } from "firebase/firestore";
 import {
   Package,
@@ -25,8 +25,9 @@ import {
   Shirt,
   Info,
   Search,
+  Edit2,
 } from "lucide-react";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
 import brandIcon from "@/assets/affordable-laundry-icon.jpg";
@@ -34,6 +35,15 @@ import { toast } from "sonner";
 import { handleFirestoreError, OperationType } from "@/lib/firestore-error";
 import { NotificationCenter } from "@/components/notification-center";
 import { PlacesAutocomplete } from "@/components/places-autocomplete";
+import {
+  broadcastOrderEvent,
+  getStatusCustomerMessage,
+  getStatusFriendlyText,
+  playNotificationChime,
+  triggerDeviceNotification,
+  setupCustomerOrderNotifications,
+  addTrackedOrderId,
+} from "@/lib/order-notifications";
 
 export type OrderRecord = {
   id: string;
@@ -63,12 +73,12 @@ export type OrderRecord = {
 };
 
 const STATUS_STEPS = [
-  { key: "COLLECTION_SCHEDULED", label: "Booked", desc: "We got your order" },
-  { key: "ITEMS_RECEIVED", label: "Picked Up", desc: "Rider took clothes" },
-  { key: "WASHING", label: "In Wash", desc: "Washing right now" },
-  { key: "READY_FOR_PICKUP", label: "Ironed", desc: "Ironed & packed" },
-  { key: "DELIVERY_ON_THE_WAY", label: "On The Way", desc: "Rider coming to you" },
-  { key: "COMPLETED", label: "Delivered", desc: "Returned to you" },
+  { key: "COLLECTION_SCHEDULED", label: "Booked", desc: "Pickup booked" },
+  { key: "ITEMS_RECEIVED", label: "Clothes Received", desc: "Clothes received & inspected" },
+  { key: "WASHING", label: "Washing Clothes", desc: "Washing & stain care" },
+  { key: "READY_FOR_PICKUP", label: "Ready for Delivery", desc: "Ironed & packaged" },
+  { key: "DELIVERY_ON_THE_WAY", label: "Out for Delivery", desc: "Courier on the way" },
+  { key: "COMPLETED", label: "Delivered", desc: "Delivered fresh" },
 ];
 
 const STATUS_CONFIG: Record<
@@ -82,13 +92,13 @@ const STATUS_CONFIG: Record<
     step: 1,
   },
   ITEMS_RECEIVED: {
-    label: "Clothes Picked Up",
+    label: "Clothes Received",
     badge: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
     icon: Package,
     step: 2,
   },
   WASHING: {
-    label: "Washing Your Clothes",
+    label: "Washing Clothes",
     badge: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30",
     icon: WashingMachine,
     step: 3,
@@ -134,13 +144,19 @@ interface CustomerPortalProps {
 }
 
 export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout, updateDisplayName } = useAuth();
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"active" | "history">("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedReceiptOrder, setSelectedReceiptOrder] = useState<OrderRecord | null>(null);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
+  const knownCustomerStatusesRef = useRef<Record<string, string>>({});
+  const isInitialCustomerSyncRef = useRef<boolean>(true);
 
   // New booking form quantities
   const [quantities, setQuantities] = useState<Record<string, number>>({
@@ -148,6 +164,21 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
     shirt: 1,
   });
   const [submittingBooking, setSubmittingBooking] = useState(false);
+
+  // Cross-tab and live order process notifications for customer
+  useEffect(() => {
+    if (!user) return;
+    const unsub = setupCustomerOrderNotifications(
+      { userId: user.uid, email: user.email || profile?.email || "" },
+      (orderId, newStatus, title, body) => {
+        toast.info(`👕 ${title}`, {
+          description: body,
+          duration: 9000,
+        });
+      },
+    );
+    return () => unsub();
+  }, [user, profile?.email]);
 
   // Real-time listener for current user's orders (Links manual and Google accounts via email & UID)
   useEffect(() => {
@@ -182,6 +213,9 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
             );
             setOrders(initialList);
+            initialList.forEach((ord) => {
+              knownCustomerStatusesRef.current[ord.id] = ord.status;
+            });
             setLoading(false);
           }
         }
@@ -192,6 +226,12 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
       const syncMergedOrders = () => {
         const list = Array.from(ordersMap.values());
         list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        list.forEach((ord) => {
+          knownCustomerStatusesRef.current[ord.id] = ord.status;
+        });
+        isInitialCustomerSyncRef.current = false;
+
         setOrders(list);
         setLoading(false);
 
@@ -236,42 +276,62 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
         };
       };
 
-      // 1. Query by UID
-      const qUid = query(ordersRef, where("userId", "==", user.uid));
-      const unsubUid = onSnapshot(
-        qUid,
-        (snapshot) => {
-          snapshot.forEach((docSnap) => {
-            ordersMap.set(docSnap.id, parseDoc(docSnap));
-          });
-          syncMergedOrders();
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, "orders", user);
-          setLoading(false);
-        },
-      );
+      // Immediately show cached orders for 0ms latency
+      syncMergedOrders();
 
-      // 2. Query by email if available (links manual email and Google login under same account)
+      let unsubUid: (() => void) | null = null;
       let unsubEmail: (() => void) | null = null;
-      if (cleanEmail) {
-        const qEmail = query(ordersRef, where("customerEmail", "==", cleanEmail));
-        unsubEmail = onSnapshot(
-          qEmail,
+
+      const attachFirestoreListeners = () => {
+        if (!auth.currentUser || unsubUid) return;
+        const currentUid = auth.currentUser.uid;
+        const qUid = query(ordersRef, where("userId", "==", currentUid));
+        unsubUid = onSnapshot(
+          qUid,
           (snapshot) => {
             snapshot.forEach((docSnap) => {
               ordersMap.set(docSnap.id, parseDoc(docSnap));
             });
             syncMergedOrders();
           },
-          () => {
-            // Silently fallback if query requires composite index
+          (error) => {
+            console.debug("Firestore customer orders sync note:", error);
+            syncMergedOrders();
+            setLoading(false);
           },
         );
+
+        if (cleanEmail && auth.currentUser.email) {
+          const qEmail = query(ordersRef, where("customerEmail", "==", cleanEmail));
+          unsubEmail = onSnapshot(
+            qEmail,
+            (snapshot) => {
+              snapshot.forEach((docSnap) => {
+                ordersMap.set(docSnap.id, parseDoc(docSnap));
+              });
+              syncMergedOrders();
+            },
+            (error) => {
+              console.debug("Firestore email query notice:", error);
+              syncMergedOrders();
+            },
+          );
+        }
+      };
+
+      if (auth.currentUser) {
+        attachFirestoreListeners();
       }
 
+      const unsubAuth = auth.onAuthStateChanged((fbUser) => {
+        if (fbUser && !unsubUid) {
+          attachFirestoreListeners();
+        }
+      });
+
       return () => {
-        unsubUid();
+        unsubAuth();
+        if (unsubUid) unsubUid();
         if (unsubEmail) unsubEmail();
       };
     } catch (err) {
@@ -368,6 +428,19 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
       const orderRef = doc(db, "orders", newOrderId);
       await setDoc(orderRef, newOrderRecord);
 
+      // Broadcast new booking immediately so admin dashboard gets instant pop-up notification
+      broadcastOrderEvent({
+        type: "NEW_ORDER",
+        orderId: newOrderId,
+        customerName: newOrderRecord.customerName,
+        customerEmail: newOrderRecord.customerEmail,
+        userId: user.uid,
+        itemCount: newOrderRecord.itemCount,
+        total: newOrderRecord.total,
+        location: newOrderRecord.location,
+        status: "COLLECTION_SCHEDULED",
+      });
+
       // Persist in local cache for immediate availability
       try {
         const rawCache = localStorage.getItem("al_orders_cache");
@@ -377,6 +450,15 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
       } catch {
         // ignore
       }
+
+      // Track order on this device for background push notifications
+      addTrackedOrderId(newOrderId);
+      triggerDeviceNotification(
+        `Affordable Laundry: Collection Scheduled!`,
+        `Order #${newOrderId} is booked. We will notify you at every step: clothes received, washing, and delivery!`,
+        newOrderId,
+        "COLLECTION_SCHEDULED",
+      );
 
       toast.success(`Collection #${newOrderId} scheduled successfully!`);
       setBookingModalOpen(false);
@@ -432,8 +514,7 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                 alt="Affordable Laundry"
                 className="w-10 h-10 rounded-2xl object-cover border border-sky-400/40 shadow-xs"
               />
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-sky-400 border-2 border-background animate-ping opacity-75" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-sky-500 border-2 border-background" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-background" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -491,22 +572,82 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Welcome Banner & Summary Stats - Ultra Transparent Glass Box */}
+        {/* Welcome Banner & Summary Stats */}
         <section className="bg-white/35 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-sky-500" />
                 <span className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-300">
-                  Unified Account Active · Live Order Tracking
+                  Customer Dashboard · Order History & Dispatch Updates
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-                Welcome, {profile?.displayName || user.displayName || "Customer"}
-              </h1>
+
+              {!isEditingName ? (
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+                    Welcome, {profile?.displayName || user.displayName || "Customer"}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempName(profile?.displayName || user.displayName || "");
+                      setIsEditingName(true);
+                    }}
+                    className="p-1.5 px-2.5 rounded-xl bg-white/40 dark:bg-white/10 hover:bg-white/60 text-muted-foreground hover:text-foreground text-xs flex items-center gap-1.5 transition-all border border-white/30 backdrop-blur-md shadow-xs"
+                    title="Change unified user name across Google and password logins"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-sky-500" />
+                    <span className="text-[11px] font-bold">Edit Name</span>
+                  </button>
+                </div>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!tempName.trim()) return;
+                    setSavingName(true);
+                    try {
+                      await updateDisplayName(tempName.trim());
+                      setIsEditingName(false);
+                    } finally {
+                      setSavingName(false);
+                    }
+                  }}
+                  className="flex items-center gap-2 flex-wrap pt-1"
+                >
+                  <input
+                    type="text"
+                    required
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="h-10 px-3.5 rounded-xl border border-sky-400/60 bg-white/80 dark:bg-black/70 backdrop-blur-xl text-sm font-bold text-foreground focus:ring-2 focus:ring-sky-500/20 focus:outline-hidden"
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    type="submit"
+                    disabled={savingName}
+                    className="h-10 rounded-xl text-xs font-bold px-3.5 bg-sky-500 hover:bg-sky-400 text-white"
+                  >
+                    {savingName ? "Saving..." : "Save Unified Name"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsEditingName(false)}
+                    className="h-10 rounded-xl text-xs px-2.5"
+                  >
+                    Cancel
+                  </Button>
+                </form>
+              )}
+
               <p className="text-xs sm:text-sm text-muted-foreground">
-                Email: <strong className="text-foreground">{user.email}</strong> · Linked across
-                Google and manual sign-ins.
+                Email: <strong className="text-foreground">{user.email}</strong> · Name and orders
+                are automatically synchronized across Google & password login.
               </p>
             </div>
 

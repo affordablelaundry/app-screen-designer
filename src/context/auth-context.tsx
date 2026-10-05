@@ -41,9 +41,70 @@ interface AuthContextType {
   signUpWithEmail: (email: string, pass: string, name: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUserPhone: (phone: string) => Promise<void>;
+  updateDisplayName: (name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Helpers for unified canonical name by email (shared across Google and manual login)
+export const getCanonicalNameForEmail = (email: string): string => {
+  const clean = email.trim().toLowerCase();
+  if (!clean) return "";
+  const direct = localStorage.getItem(`al_canonical_name_${clean}`);
+  if (direct && direct.trim()) return direct.trim();
+
+  try {
+    const raw = localStorage.getItem("al_local_accounts");
+    if (raw) {
+      const accounts = JSON.parse(raw);
+      if (accounts[clean]?.name && accounts[clean].name.trim()) {
+        return accounts[clean].name.trim();
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return "";
+};
+
+export const setCanonicalNameForEmail = (email: string, name: string) => {
+  const clean = email.trim().toLowerCase();
+  const trimmed = name.trim();
+  if (!clean || !trimmed) return;
+
+  localStorage.setItem(`al_canonical_name_${clean}`, trimmed);
+
+  try {
+    const raw = localStorage.getItem("al_local_accounts");
+    const accounts = raw ? JSON.parse(raw) : {};
+    if (accounts[clean]) {
+      accounts[clean].name = trimmed;
+    } else {
+      accounts[clean] = {
+        name: trimmed,
+        pass: "",
+        uid: `usr_${clean.replace(/[^a-z0-9]/g, "")}`,
+      };
+    }
+    localStorage.setItem("al_local_accounts", JSON.stringify(accounts));
+  } catch {
+    // ignore
+  }
+
+  try {
+    const activeRaw = localStorage.getItem("al_active_local_user");
+    if (activeRaw) {
+      const active = JSON.parse(activeRaw);
+      if (active.email?.toLowerCase() === clean) {
+        active.displayName = trimmed;
+        localStorage.setItem("al_active_local_user", JSON.stringify(active));
+      }
+    }
+  } catch {
+    // ignore
+  }
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -75,6 +136,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignore
     }
 
+    // Determine the single unified canonical user name for this email
+    let canonicalName = getCanonicalNameForEmail(cleanEmail);
+
+    if (!canonicalName) {
+      canonicalName =
+        localName ||
+        (appUser.displayName || "").trim() ||
+        (isUserAdmin ? "Affordable Laundry Admin" : "");
+
+      if (!canonicalName && cleanEmail) {
+        const namePart = cleanEmail.split("@")[0].replace(/[._-]/g, " ");
+        canonicalName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+      }
+
+      if (canonicalName) {
+        setCanonicalNameForEmail(cleanEmail, canonicalName);
+      }
+    } else {
+      setCanonicalNameForEmail(cleanEmail, canonicalName);
+    }
+
+    // If Firebase currentUser exists, sync its displayName to the unified canonical name
+    if (auth.currentUser && canonicalName && auth.currentUser.displayName !== canonicalName) {
+      updateProfile(auth.currentUser, { displayName: canonicalName }).catch(() => {});
+    }
+
+    // Update appUser state to always show the unified canonical name
+    setUser((prev) => {
+      if (!prev) return prev;
+      if (prev.displayName !== canonicalName) {
+        return { ...prev, displayName: canonicalName };
+      }
+      return prev;
+    });
+
     try {
       const userRef = doc(db, "users", appUser.uid);
       const snap = await getDoc(userRef);
@@ -86,29 +182,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...data,
           email: cleanEmail,
           phone: data.phone || localPhone || "",
-          displayName:
-            data.displayName ||
-            localName ||
-            appUser.displayName ||
-            (isUserAdmin ? "Admin" : "Valued Customer"),
+          displayName: canonicalName, // Always enforce single unified name
           role: finalRole,
         };
-        // Update user record with latest merged phone and displayName
-        if (localPhone && !data.phone) {
-          try {
-            await setDoc(userRef, { phone: localPhone }, { merge: true });
-          } catch {
-            // ignore
-          }
+
+        // Update user record with latest merged phone and canonical displayName
+        try {
+          await setDoc(
+            userRef,
+            { displayName: canonicalName, phone: unifiedProfile.phone },
+            { merge: true },
+          );
+        } catch {
+          // ignore
         }
+
         setProfile(unifiedProfile);
         setIsAdmin(finalRole === "admin");
       } else {
         const newProfile: UserProfile = {
           id: appUser.uid,
           email: cleanEmail,
-          displayName:
-            appUser.displayName || localName || (isUserAdmin ? "Admin" : "Valued Customer"),
+          displayName: canonicalName,
           phone: localPhone || "",
           role: isUserAdmin ? "admin" : "customer",
           createdAt: new Date().toISOString(),
@@ -126,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fallbackProfile: UserProfile = {
         id: appUser.uid,
         email: cleanEmail,
-        displayName: appUser.displayName || localName || (isUserAdmin ? "Admin" : "Customer"),
+        displayName: canonicalName,
         phone: localPhone || "",
         role: isUserAdmin ? "admin" : "customer",
         createdAt: new Date().toISOString(),
@@ -176,6 +271,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const res = await signInWithPopup(auth, googleProvider);
       const cleanEmail = (res.user.email || "").trim().toLowerCase();
+
+      // Check for an existing canonical name for this email (from manual sign up or past session)
+      let canonicalName = getCanonicalNameForEmail(cleanEmail);
+
+      if (canonicalName) {
+        // Enforce the existing unified name on the Google account
+        await updateProfile(res.user, { displayName: canonicalName }).catch(() => {});
+      } else if (res.user.displayName && res.user.displayName.trim()) {
+        // If Google is the first to provide a name, record it as the canonical name for this email
+        canonicalName = res.user.displayName.trim();
+        setCanonicalNameForEmail(cleanEmail, canonicalName);
+      } else {
+        const namePart = cleanEmail.split("@")[0].replace(/[._-]/g, " ");
+        canonicalName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+        setCanonicalNameForEmail(cleanEmail, canonicalName);
+        await updateProfile(res.user, { displayName: canonicalName }).catch(() => {});
+      }
+
       // Link with any existing manual account created with this same email
       try {
         const storedAccountsRaw = localStorage.getItem("al_local_accounts");
@@ -183,14 +296,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const accounts = JSON.parse(storedAccountsRaw);
           if (accounts[cleanEmail]) {
             accounts[cleanEmail].uid = res.user.uid;
+            accounts[cleanEmail].name = canonicalName;
             localStorage.setItem("al_local_accounts", JSON.stringify(accounts));
           }
         }
       } catch {
         // ignore
       }
+
       localStorage.removeItem("al_active_local_user");
-      toast.success(`Welcome back, ${res.user.displayName || "Customer"}!`);
+      toast.success(`Welcome back, ${canonicalName}!`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Google sign in failed";
       if (!msg.includes("popup-closed-by-user")) {
@@ -204,12 +319,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithEmail = async (email: string, pass: string) => {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
+    const canonicalName = getCanonicalNameForEmail(cleanEmail);
 
     try {
       // First attempt Firebase Auth
       const res = await signInWithEmailAndPassword(auth, cleanEmail, pass);
       localStorage.removeItem("al_active_local_user");
-      toast.success(`Welcome back, ${res.user.displayName || cleanEmail}!`);
+      const nameToShow = canonicalName || res.user.displayName || cleanEmail;
+      if (canonicalName && res.user.displayName !== canonicalName) {
+        updateProfile(res.user, { displayName: canonicalName }).catch(() => {});
+      }
+      toast.success(`Welcome back, ${nameToShow}!`);
       return;
     } catch (firebaseErr: unknown) {
       // If Firebase failed, fallback to local registered accounts
@@ -231,10 +351,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error("Incorrect password.");
           }
 
+          const effectiveName = canonicalName || existing.name;
           const localUser: AppUser = {
             uid: existing.uid,
             email: cleanEmail,
-            displayName: existing.name,
+            displayName: effectiveName,
             phoneNumber: existing.phone || null,
           };
 
@@ -243,16 +364,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const isUserAdmin = cleanEmail === ADMIN_EMAIL.toLowerCase();
           setIsAdmin(isUserAdmin);
           await syncProfile(localUser);
-          toast.success(`Welcome back, ${existing.name}!`);
+          toast.success(`Welcome back, ${effectiveName}!`);
           return;
         }
 
         // If it's the admin email signing in for the first time
         if (cleanEmail === ADMIN_EMAIL.toLowerCase()) {
+          const effectiveAdminName = canonicalName || "Affordable Laundry Admin";
           const adminUser: AppUser = {
             uid: "admin_local_master",
             email: cleanEmail,
-            displayName: "Affordable Laundry Admin",
+            displayName: effectiveAdminName,
           };
           localStorage.setItem("al_active_local_user", JSON.stringify(adminUser));
           setUser(adminUser);
@@ -264,22 +386,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Otherwise create the account on the fly for ease of use
         const generatedUid = `usr_${cleanEmail.replace(/[^a-z0-9]/g, "")}_${Date.now().toString().slice(-4)}`;
-        const autoName = cleanEmail.split("@")[0].replace(/[._-]/g, " ");
-        const formattedName = autoName.charAt(0).toUpperCase() + autoName.slice(1);
+        let effectiveName = canonicalName;
+        if (!effectiveName) {
+          const autoName = cleanEmail.split("@")[0].replace(/[._-]/g, " ");
+          effectiveName = autoName.charAt(0).toUpperCase() + autoName.slice(1);
+          setCanonicalNameForEmail(cleanEmail, effectiveName);
+        }
 
-        accounts[cleanEmail] = { pass, name: formattedName, uid: generatedUid };
+        accounts[cleanEmail] = { pass, name: effectiveName, uid: generatedUid };
         localStorage.setItem("al_local_accounts", JSON.stringify(accounts));
 
         const newUser: AppUser = {
           uid: generatedUid,
           email: cleanEmail,
-          displayName: formattedName,
+          displayName: effectiveName,
         };
 
         localStorage.setItem("al_active_local_user", JSON.stringify(newUser));
         setUser(newUser);
         await syncProfile(newUser);
-        toast.success(`Signed in as ${formattedName}!`);
+        toast.success(`Signed in as ${effectiveName}!`);
       } catch (innerErr) {
         if (innerErr instanceof Error && innerErr.message === "Incorrect password.") {
           throw innerErr;
@@ -295,18 +421,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUpWithEmail = async (email: string, pass: string, name: string, phone?: string) => {
     setLoading(true);
     const cleanEmail = email.trim().toLowerCase();
+    const trimmedName = name.trim();
+
+    // Register canonical name immediately for this email
+    if (trimmedName) {
+      setCanonicalNameForEmail(cleanEmail, trimmedName);
+    }
 
     try {
       // First try Firebase Auth
       const res = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
-      await updateProfile(res.user, { displayName: name });
+      await updateProfile(res.user, { displayName: trimmedName });
       localStorage.removeItem("al_active_local_user");
 
       const isUserAdmin = cleanEmail === ADMIN_EMAIL.toLowerCase();
       const userProfile: UserProfile = {
         id: res.user.uid,
         email: cleanEmail,
-        displayName: name,
+        displayName: trimmedName,
         phone: phone || "",
         role: isUserAdmin ? "admin" : "customer",
         createdAt: new Date().toISOString(),
@@ -338,7 +470,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       accounts[cleanEmail] = {
         pass,
-        name: name || existingAccount?.name || "Customer",
+        name: trimmedName || existingAccount?.name || "Customer",
         phone: phone || existingAccount?.phone || "",
         uid: generatedUid,
       };
@@ -347,7 +479,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const localUser: AppUser = {
         uid: generatedUid,
         email: cleanEmail,
-        displayName: name,
+        displayName: trimmedName || existingAccount?.name || "Customer",
         phoneNumber: phone || null,
       };
 
@@ -358,7 +490,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userProfile: UserProfile = {
         id: generatedUid,
         email: cleanEmail,
-        displayName: name,
+        displayName: trimmedName || existingAccount?.name || "Customer",
         phone: phone || "",
         role: isUserAdmin ? "admin" : "customer",
         createdAt: new Date().toISOString(),
@@ -372,10 +504,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setProfile(userProfile);
       setIsAdmin(isUserAdmin);
-      toast.success(`Welcome to Affordable Laundry, ${name}!`);
+      toast.success(`Welcome to Affordable Laundry, ${trimmedName || "Customer"}!`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateDisplayName = async (newName: string) => {
+    const trimmed = newName.trim();
+    if (!user || !trimmed) return;
+    const cleanEmail = (user.email || "").trim().toLowerCase();
+
+    setCanonicalNameForEmail(cleanEmail, trimmed);
+
+    if (auth.currentUser) {
+      try {
+        await updateProfile(auth.currentUser, { displayName: trimmed });
+      } catch {
+        // ignore
+      }
+    }
+
+    try {
+      const ref = doc(db, "users", user.uid);
+      await setDoc(
+        ref,
+        { displayName: trimmed, updatedAt: new Date().toISOString() },
+        { merge: true },
+      );
+    } catch {
+      // ignore
+    }
+
+    setUser((prev) => (prev ? { ...prev, displayName: trimmed } : null));
+    setProfile((prev) => (prev ? { ...prev, displayName: trimmed } : null));
+    toast.success(`Name updated to ${trimmed}!`);
   };
 
   const logout = async () => {
@@ -398,7 +561,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await setDoc(ref, { phone, updatedAt: new Date().toISOString() }, { merge: true });
       setProfile((prev) => (prev ? { ...prev, phone } : null));
       toast.success("Contact details updated");
-    } catch (err) {
+    } catch {
       setProfile((prev) => (prev ? { ...prev, phone } : null));
       toast.success("Phone number saved");
     }
@@ -416,6 +579,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUpWithEmail,
         logout,
         updateUserPhone,
+        updateDisplayName,
       }}
     >
       {children}
