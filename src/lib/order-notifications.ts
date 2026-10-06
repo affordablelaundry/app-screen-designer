@@ -141,11 +141,66 @@ export function addTrackedOrderId(orderId: string): string[] {
     if (!current.includes(cleanId)) {
       const updated = [cleanId, ...current].slice(0, 30);
       localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(updated));
+      syncTrackedOrdersWithServiceWorker();
       return updated;
     }
+    syncTrackedOrdersWithServiceWorker();
     return current;
   } catch {
     return [];
+  }
+}
+
+// Sync tracked orders with Service Worker for true background checking outside the app
+export function syncTrackedOrdersWithServiceWorker() {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+  try {
+    const tracked = getTrackedOrderIds();
+    const ordersToSync: { id: string; status?: string }[] = [];
+    const rawCache = localStorage.getItem("al_orders_cache");
+    const cacheMap: Record<string, string> = {};
+    if (rawCache) {
+      try {
+        const list = JSON.parse(rawCache) as { id: string; status: string }[];
+        list.forEach((o) => {
+          if (o.id) cacheMap[o.id] = o.status;
+        });
+      } catch {
+        // ignore
+      }
+    }
+    tracked.forEach((id) => {
+      ordersToSync.push({ id, status: cacheMap[id] || "" });
+    });
+
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: "TRACK_ORDERS",
+        orders: ordersToSync,
+      });
+    }
+
+    navigator.serviceWorker.ready
+      .then((reg) => {
+        if (reg.active) {
+          reg.active.postMessage({
+            type: "TRACK_ORDERS",
+            orders: ordersToSync,
+          });
+        }
+        if ("periodicSync" in reg) {
+          (
+            reg as unknown as {
+              periodicSync: { register: (tag: string, opt: object) => Promise<void> };
+            }
+          ).periodicSync
+            .register("check-order-updates", { minInterval: 60 * 1000 })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  } catch {
+    // ignore
   }
 }
 
@@ -211,7 +266,7 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
-// Trigger device notification with Service Worker background support and strict 12s deduplication
+// Trigger device notification with Service Worker background support and strict single-dispatch deduplication
 export async function triggerDeviceNotification(
   title: string,
   body: string,
@@ -222,7 +277,7 @@ export async function triggerDeviceNotification(
   const dedupeKey = `${type}:${orderId}:${status}`;
 
   // Strict global persistent deduplication across all tabs & windows on this device
-  if (isAlertDuplicate(dedupeKey, 12000)) {
+  if (isAlertDuplicate(dedupeKey, 15000)) {
     return;
   }
 
@@ -230,7 +285,7 @@ export async function triggerDeviceNotification(
 
   if (typeof window !== "undefined" && "navigator" in window && "vibrate" in navigator) {
     try {
-      navigator.vibrate([200, 100, 200]);
+      navigator.vibrate([250, 150, 250]);
     } catch {
       // ignore
     }
@@ -268,11 +323,15 @@ export async function triggerDeviceNotification(
     // 1. Primary: Use Service Worker registration (Shows on lock screen & outside the app on Android/iOS/Desktop)
     if ("serviceWorker" in navigator) {
       try {
-        const reg = await Promise.race([
-          navigator.serviceWorker.getRegistration(),
-          navigator.serviceWorker.ready,
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)),
-        ]);
+        let reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) {
+          reg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<ServiceWorkerRegistration | null>((resolve) =>
+              setTimeout(() => resolve(null), 1500),
+            ),
+          ]);
+        }
         if (reg && "showNotification" in reg) {
           await reg.showNotification(title, notifOptions);
           notificationShown = true;
@@ -280,23 +339,10 @@ export async function triggerDeviceNotification(
       } catch (err) {
         console.debug("ServiceWorker showNotification note:", err);
       }
-
-      // Also message service worker active client for background processing
-      try {
-        if (navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({
-            type: "SHOW_NOTIFICATION",
-            title,
-            options: notifOptions,
-          });
-        }
-      } catch {
-        // ignore
-      }
     }
 
-    // 2. Fallback ONLY if Service Worker did not display it
-    if (!notificationShown) {
+    // 2. Fallback ONLY if Service Worker is completely unsupported in this browser environment
+    if (!notificationShown && !("serviceWorker" in navigator)) {
       try {
         const notif = new Notification(title, notifOptions);
         notif.onclick = () => {
@@ -439,11 +485,6 @@ export function setupAdminOrderNotifications(
     location: string;
     total: number;
   }) => {
-    const dedupeKey = `admin_alert:${booking.orderId}`;
-    if (isAlertDuplicate(dedupeKey, 12000)) {
-      return; // Skip duplicate notification within 12s across all windows
-    }
-
     triggerDeviceNotification(
       `🔔 New Customer Booking #${booking.orderId}`,
       `${booking.customerName} placed a booking for ${booking.itemCount} items at ${booking.location} (GHC ${booking.total}).`,
@@ -606,18 +647,16 @@ export function setupCustomerOrderNotifications(
     // ignore
   }
 
+  // Ensure Service Worker is watching these tracked orders in the background outside the app
+  syncTrackedOrdersWithServiceWorker();
+
   const cleanEmail = userIdentifier.email?.trim().toLowerCase();
   const cleanUid = userIdentifier.userId;
   const previousStatuses: Record<string, string> = {};
 
   const notifyCustomer = (orderId: string, newStatus: string, stageNotes?: string) => {
-    const dedupeKey = `customer_update:${orderId}:${newStatus}`;
-    if (isAlertDuplicate(dedupeKey, 12000)) {
-      return; // Skip duplicate notification within 12s across all tabs & listeners
-    }
-
     const { title, body } = getStatusCustomerMessage(newStatus, orderId, stageNotes);
-    triggerDeviceNotification(title, body, orderId, newStatus);
+    triggerDeviceNotification(title, body, orderId, newStatus, "customer_update");
     onStatusUpdate(orderId, newStatus, title, body);
   };
 

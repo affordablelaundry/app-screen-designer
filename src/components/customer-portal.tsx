@@ -517,45 +517,45 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
   }
 
   return (
-    <div className="min-h-screen bg-muted/20 text-foreground flex flex-col font-sans">
+    <div className="min-h-screen bg-muted/20 text-foreground flex flex-col font-sans overflow-x-hidden">
       {/* Portal Header - Translucent Glass */}
-      <header className="sticky top-0 z-40 bg-white/40 dark:bg-black/50 backdrop-blur-2xl border-b border-white/30 dark:border-white/10 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/60 dark:bg-black/60 backdrop-blur-2xl border-b border-white/30 dark:border-white/10 shadow-xs">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-15 sm:h-20 flex items-center justify-between gap-1.5 sm:gap-2">
           {/* Brand & Portal Label */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+            <div className="relative shrink-0">
               <img
                 src={brandIcon}
                 alt="Affordable Laundry"
-                className="w-10 h-10 rounded-2xl object-cover border border-sky-400/40 shadow-xs"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl object-cover border border-sky-400/40 shadow-xs"
               />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-background" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-sky-500 border-2 border-background" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-base tracking-tight text-foreground">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="font-extrabold text-xs sm:text-base tracking-tight text-foreground truncate max-w-[125px] xs:max-w-none">
                   Affordable Laundry
                 </span>
-                <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-full bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30">
-                  Customer Portal
+                <span className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 text-[8px] sm:text-[10px] font-black uppercase tracking-wider rounded-full bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 shrink-0">
+                  Portal
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground hidden sm:block">
-                Garment care status, collection booking & unified order history
+              <p className="text-[11px] text-muted-foreground hidden sm:block truncate">
+                Garment care status, collection booking & order history
               </p>
             </div>
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <Button
               onClick={() => setBookingModalOpen(true)}
               size="sm"
-              className="rounded-2xl text-xs font-bold shadow-md gap-1.5 h-9 sm:h-10 px-4 bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/25 transition-transform hover:scale-105 active:scale-95"
+              className="rounded-xl sm:rounded-2xl text-xs font-bold shadow-md gap-1 h-8 sm:h-10 px-2 sm:px-4 bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/25 transition-transform hover:scale-105 active:scale-95"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Book Collection</span>
-              <span className="sm:hidden">Book</span>
+              <span className="sm:hidden text-[10px] xs:text-[11px]">Book</span>
             </Button>
 
             <NotificationCenter />
@@ -564,43 +564,43 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
               variant="ghost"
               size="sm"
               onClick={onBackToLanding}
-              className="rounded-2xl text-xs font-semibold text-muted-foreground hover:text-foreground h-9 sm:h-10 px-3 bg-white/20 hover:bg-white/35 backdrop-blur-xl border border-white/20"
+              className="rounded-xl sm:rounded-2xl text-xs font-semibold text-muted-foreground hover:text-foreground h-8 sm:h-10 px-2 sm:px-3 bg-white/20 hover:bg-white/35 backdrop-blur-xl border border-white/20"
               title="Return to the main marketing website"
             >
-              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-              <span className="hidden md:inline">Website</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden md:inline ml-1">Website</span>
             </Button>
 
             <Button
               variant="outline"
               size="sm"
               onClick={logout}
-              className="rounded-2xl text-xs font-semibold text-destructive hover:bg-destructive/10 border-destructive/20 h-9 sm:h-10 px-3"
+              className="rounded-xl sm:rounded-2xl text-xs font-semibold text-destructive hover:bg-destructive/10 border-destructive/20 h-8 sm:h-10 px-2 sm:px-3"
               title="Sign out of your account"
             >
-              <LogOut className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline ml-1">Sign Out</span>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-2.5 sm:px-6 lg:px-8 py-3.5 sm:py-8 space-y-3.5 sm:space-y-8">
         {/* Welcome Banner & Summary Stats */}
-        <section className="bg-white/35 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-sky-500" />
-                <span className="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-300">
-                  Customer Dashboard · Order History & Dispatch Updates
+        <section className="bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 sm:p-8 shadow-xl space-y-3.5 sm:space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 sm:gap-6">
+            <div className="space-y-1 min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-300 truncate">
+                  Customer Dashboard · Order History & Dispatch
                 </span>
               </div>
 
               {!isEditingName ? (
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-lg sm:text-3xl font-extrabold text-foreground tracking-tight break-words">
                     Welcome, {profile?.displayName || user.displayName || "Customer"}
                   </h1>
                   <button
@@ -609,11 +609,11 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                       setTempName(profile?.displayName || user.displayName || "");
                       setIsEditingName(true);
                     }}
-                    className="p-1.5 px-2.5 rounded-xl bg-white/40 dark:bg-white/10 hover:bg-white/60 text-muted-foreground hover:text-foreground text-xs flex items-center gap-1.5 transition-all border border-white/30 backdrop-blur-md shadow-xs"
-                    title="Change unified user name across Google and password logins"
+                    className="p-1 px-2 rounded-xl bg-white/40 dark:bg-white/10 hover:bg-white/60 text-muted-foreground hover:text-foreground text-xs flex items-center gap-1 transition-all border border-white/30 backdrop-blur-md shadow-xs"
+                    title="Change display name"
                   >
-                    <Edit2 className="w-3.5 h-3.5 text-sky-500" />
-                    <span className="text-[11px] font-bold">Edit Name</span>
+                    <Edit2 className="w-3 h-3 text-sky-500" />
+                    <span className="text-[10px] sm:text-[11px] font-bold">Edit</span>
                   </button>
                 </div>
               ) : (
@@ -646,7 +646,7 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                     disabled={savingName}
                     className="h-10 rounded-xl text-xs font-bold px-3.5 bg-sky-500 hover:bg-sky-400 text-white"
                   >
-                    {savingName ? "Saving..." : "Save Unified Name"}
+                    {savingName ? "Saving..." : "Save"}
                   </Button>
                   <Button
                     size="sm"
@@ -660,35 +660,34 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                 </form>
               )}
 
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Email: <strong className="text-foreground">{user.email}</strong> · Name and orders
-                are automatically synchronized across Google & password login.
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                Account: <strong className="text-foreground">{user.email}</strong>
               </p>
             </div>
 
             {/* Quick Metrics - Translucent Glass Pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-4 text-center min-w-[110px] shadow-sm hover:scale-105 transition-transform">
-                <span className="text-[11px] font-bold text-muted-foreground block uppercase tracking-wider">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+              <div className="bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center shadow-xs hover:scale-105 transition-transform">
+                <span className="text-[10px] sm:text-[11px] font-bold text-muted-foreground block uppercase tracking-wider">
                   In Progress
                 </span>
-                <span className="text-2xl sm:text-3xl font-black text-sky-600 dark:text-sky-400">
+                <span className="text-xl sm:text-3xl font-black text-sky-600 dark:text-sky-400">
                   {activeOrders.length}
                 </span>
               </div>
-              <div className="bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-4 text-center min-w-[110px] shadow-sm hover:scale-105 transition-transform">
-                <span className="text-[11px] font-bold text-muted-foreground block uppercase tracking-wider">
+              <div className="bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center shadow-xs hover:scale-105 transition-transform">
+                <span className="text-[10px] sm:text-[11px] font-bold text-muted-foreground block uppercase tracking-wider">
                   Delivered
                 </span>
-                <span className="text-2xl sm:text-3xl font-black text-foreground">
+                <span className="text-xl sm:text-3xl font-black text-foreground">
                   {completedOrders.length}
                 </span>
               </div>
-              <div className="bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-4 text-center min-w-[110px] col-span-2 sm:col-span-1 shadow-sm hover:scale-105 transition-transform">
-                <span className="text-[11px] font-bold text-muted-foreground block uppercase tracking-wider">
+              <div className="bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center col-span-2 sm:col-span-1 shadow-xs hover:scale-105 transition-transform">
+                <span className="text-[10px] sm:text-[11px] font-bold text-muted-foreground block uppercase tracking-wider">
                   Total Spent
                 </span>
-                <span className="text-2xl sm:text-3xl font-black text-foreground">
+                <span className="text-xl sm:text-3xl font-black text-foreground">
                   GHC {totalSpent}
                 </span>
               </div>
@@ -697,24 +696,24 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
         </section>
 
         {/* Tab Selection & Search Row - Translucent Glass */}
-        <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center p-1.5 bg-white/35 dark:bg-white/5 backdrop-blur-2xl border border-white/30 rounded-2xl shadow-sm w-fit">
+        <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="w-full sm:w-fit grid grid-cols-2 sm:flex items-center p-1 sm:p-1.5 bg-white/35 dark:bg-white/5 backdrop-blur-2xl border border-white/30 rounded-xl sm:rounded-2xl shadow-xs">
             <button
               onClick={() => {
                 setActiveTab("active");
                 setSearchQuery("");
               }}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === "active"
-                  ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+                  ? "bg-sky-500 text-white shadow-xs shadow-sky-500/25"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Package className="w-3.5 h-3.5" />
-              Active Orders Tracker
+              <Package className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Active Orders</span>
               {activeOrders.length > 0 && (
                 <span
-                  className={`px-2 py-0.2 rounded-full text-[10px] font-extrabold ${
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold shrink-0 ${
                     activeTab === "active" ? "bg-white text-sky-600" : "bg-sky-500/10 text-sky-600"
                   }`}
                 >
@@ -727,17 +726,17 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                 setActiveTab("history");
                 setSearchQuery("");
               }}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === "history"
-                  ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+                  ? "bg-sky-500 text-white shadow-xs shadow-sky-500/25"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Order History
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">History</span>
               {completedOrders.length > 0 && (
                 <span
-                  className={`px-2 py-0.2 rounded-full text-[10px] font-extrabold ${
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold shrink-0 ${
                     activeTab === "history" ? "bg-white text-sky-600" : "bg-muted text-foreground"
                   }`}
                 >
@@ -747,20 +746,20 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative w-full sm:w-64">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
               <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-3" />
               <input
                 type="text"
                 placeholder="Search order #, location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 pl-8 pr-3 rounded-2xl border border-white/30 bg-white/30 dark:bg-white/5 backdrop-blur-xl text-xs text-foreground focus:ring-2 focus:ring-sky-500/20 focus:outline-hidden"
+                className="w-full h-9 pl-8 pr-3 rounded-xl sm:rounded-2xl border border-white/30 bg-white/30 dark:bg-white/5 backdrop-blur-xl text-xs text-foreground focus:ring-2 focus:ring-sky-500/20 focus:outline-hidden"
               />
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin-slow text-sky-500" />
-              <span className="hidden sm:inline">Live Updates</span>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+              <RefreshCw className="w-3 h-3 animate-spin-slow text-sky-500" />
+              <span className="hidden sm:inline">Live</span>
             </div>
           </div>
         </section>
@@ -809,23 +808,23 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
               return (
                 <article
                   key={order.id}
-                  className="bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl hover:border-sky-400/50 transition-all duration-300 space-y-6"
+                  className="bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3.5 sm:p-8 shadow-xl hover:shadow-2xl hover:border-sky-400/50 transition-all duration-300 space-y-3.5 sm:space-y-6"
                 >
                   {/* Order Top Bar */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/20">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg font-black text-foreground tracking-tight">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-white/20">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                        <span className="text-base sm:text-lg font-black text-foreground tracking-tight">
                           Order #{order.id}
                         </span>
                         <span
-                          className={`px-3 py-1 text-xs font-bold rounded-full border inline-flex items-center gap-1.5 ${statusCfg.badge}`}
+                          className={`px-2.5 py-0.5 text-[11px] sm:text-xs font-bold rounded-full border inline-flex items-center gap-1.5 ${statusCfg.badge}`}
                         >
                           <StatusIcon className="w-3.5 h-3.5" />
                           {statusCfg.label}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <div className="text-[11px] sm:text-xs text-muted-foreground flex flex-wrap items-center gap-x-2.5 gap-y-1">
                         <span>
                           Booked:{" "}
                           {new Date(order.createdAt).toLocaleDateString("en-GB", {
@@ -836,25 +835,27 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                             minute: "2-digit",
                           })}
                         </span>
-                        <span>•</span>
+                        <span className="hidden xs:inline">•</span>
                         <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-sky-500" />
-                          {order.location}
+                          <MapPin className="w-3 h-3 text-sky-500 shrink-0" />
+                          <span className="truncate max-w-[200px] xs:max-w-none">
+                            {order.location}
+                          </span>
                         </span>
-                        <span>•</span>
+                        <span className="hidden xs:inline">•</span>
                         <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-sky-500" />
-                          Pickup: {order.pickupDate}
+                          <Calendar className="w-3 h-3 text-sky-500 shrink-0" />
+                          <span>Pickup: {order.pickupDate}</span>
                         </span>
-                      </p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setSelectedReceiptOrder(order)}
-                        className="rounded-2xl text-xs font-semibold h-9 bg-white/20 dark:bg-white/5 backdrop-blur-xl border border-white/30 hover:bg-white/40"
+                        className="w-full sm:w-auto rounded-xl sm:rounded-2xl text-xs font-semibold h-8.5 sm:h-9 bg-white/20 dark:bg-white/5 backdrop-blur-xl border border-white/30 hover:bg-white/40 justify-center"
                       >
                         <Receipt className="w-3.5 h-3.5 mr-1.5 text-sky-500" />
                         View Receipt
@@ -863,7 +864,7 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                   </div>
 
                   {/* 6-Stage Progress Stepper */}
-                  <div className="space-y-3">
+                  <div className="space-y-2.5 sm:space-y-3">
                     <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
                       <span>Care Journey</span>
                       <span className="text-sky-600 dark:text-sky-400 font-bold">
@@ -872,17 +873,35 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="relative w-full h-2.5 bg-muted/60 rounded-full overflow-hidden">
+                    <div className="relative w-full h-2 sm:h-2.5 bg-muted/60 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-sky-400 to-sky-600 rounded-full transition-all duration-700 ease-out shadow-xs"
                         style={{
-                          width: `${Math.min(100, Math.max(12, (currentStepNumber / 6) * 100))}%`,
+                          width: `${Math.min(100, Math.max(14, (currentStepNumber / 6) * 100))}%`,
                         }}
                       />
                     </div>
 
+                    {/* Active Stage Callout on Mobile Screens for instant legibility */}
+                    <div className="sm:hidden p-2.5 rounded-xl bg-sky-500/10 border border-sky-400/30 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <StatusIcon className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="font-extrabold text-foreground block truncate">
+                            {statusCfg.label}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground block truncate">
+                            {STATUS_STEPS[currentStepNumber - 1]?.desc || "In process"}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-sky-500/20 px-2 py-0.5 rounded-full shrink-0 ml-2">
+                        {currentStepNumber} / 6
+                      </span>
+                    </div>
+
                     {/* Steps Pills */}
-                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1">
+                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2 pt-0.5">
                       {STATUS_STEPS.map((step, idx) => {
                         const stepNum = idx + 1;
                         const isDone = currentStepNumber > stepNum;
@@ -891,7 +910,7 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                         return (
                           <div
                             key={step.key}
-                            className={`p-2.5 rounded-2xl border text-center transition-all ${
+                            className={`p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border text-center transition-all ${
                               isCurrent
                                 ? "bg-sky-500/15 border-sky-400/50 text-sky-600 dark:text-sky-300 font-bold shadow-xs"
                                 : isDone
@@ -899,15 +918,15 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                                   : "bg-white/10 dark:bg-white/5 border-transparent text-muted-foreground opacity-60"
                             }`}
                           >
-                            <div className="flex items-center justify-center gap-1 text-[11px] mb-0.5">
+                            <div className="flex items-center justify-center gap-1 text-[10px] sm:text-[11px] mb-0.5">
                               {isDone ? (
-                                <Check className="w-3 h-3 text-emerald-600" />
+                                <Check className="w-3 h-3 text-emerald-600 shrink-0" />
                               ) : (
-                                <span>{stepNum}.</span>
+                                <span className="shrink-0">{stepNum}.</span>
                               )}
-                              <span>{step.label}</span>
+                              <span className="truncate">{step.label}</span>
                             </div>
-                            <span className="text-[10px] block opacity-80 leading-tight">
+                            <span className="text-[9px] sm:text-[10px] block opacity-80 leading-tight truncate">
                               {step.desc}
                             </span>
                           </div>
@@ -917,7 +936,7 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                   </div>
 
                   {/* Details Grid: Garments, Notes & Assigned Rider */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 pt-1 sm:pt-2">
                     {/* Garments breakdown */}
                     <div className="p-4 bg-white/30 dark:bg-white/5 backdrop-blur-xl border border-white/25 rounded-2xl space-y-2">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">

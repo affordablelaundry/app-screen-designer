@@ -786,27 +786,22 @@ export function LaundryApp() {
       {/* Main Landing Sections */}
       <main className="w-full overflow-x-hidden">
         {/* Full Screen Width Hero Canvas with Curled, Animated Bottom Edge */}
-        <section className="relative w-full overflow-hidden pt-16 sm:pt-28 pb-10 sm:pb-24 group">
+        <section className="relative w-full overflow-hidden min-h-[480px] sm:min-h-[580px] pt-18 sm:pt-28 pb-12 sm:pb-24 flex items-center group">
           {/* High-Resolution Ghanaian Laundry Specialists Atelier Photo - Optimized for portrait mobile screens */}
           <img
             src={heroAtelierImage}
             alt="Affordable Laundry Friendly Ghanaian Team in Kumasi Atelier"
-            className="absolute inset-0 w-full h-full object-cover object-[center_25%] sm:object-center transition-transform duration-1000 group-hover:scale-105"
+            className="absolute inset-0 w-full h-full object-cover object-[center_18%] sm:object-center transition-transform duration-1000 group-hover:scale-105"
             loading="eager"
             decoding="async"
           />
 
-          {/* Cinematic Gradient Overlays: Clear and warm on mobile so team is visible, with high legibility */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80 sm:bg-gradient-to-r sm:from-black/90 sm:via-black/72 sm:to-black/40" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/15" />
+          {/* Cinematic Gradient Overlays: Clear and warm on mobile so team is visible, with high text legibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/40 sm:bg-gradient-to-r sm:from-black/90 sm:via-black/70 sm:to-black/35" />
+          <div className="absolute inset-0 bg-radial from-transparent via-transparent to-black/40" />
 
           {/* Hero Content Container Positioned on Top - Balanced for slim portrait phone screens */}
           <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-16 lg:py-20 space-y-4 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
-            {/* Kicker Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/25 text-white text-xs font-bold uppercase tracking-widest shadow-xl">
-              <span>Fast Laundry Pickup & Delivery in KNUST</span>
-            </div>
-
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.08] drop-shadow-md max-w-4xl">
               Clean clothes, <br />

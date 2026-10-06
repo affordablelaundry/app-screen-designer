@@ -42,12 +42,7 @@ service cloud.firestore {
 
     // Orders collection
     match /orders/{orderId} {
-      allow get: if isValidId(orderId) && (
-        isAdmin() ||
-        (isSignedIn() && resource.data.userId == request.auth.uid) ||
-        (isSignedIn() && 'customerEmail' in resource.data && resource.data.customerEmail == request.auth.token.email) ||
-        resource.data.id == orderId
-      );
+      allow get: if isValidId(orderId);
       allow list: if isSignedIn() && (
         isAdmin() ||
         resource.data.userId == request.auth.uid ||

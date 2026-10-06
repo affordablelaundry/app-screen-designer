@@ -543,44 +543,45 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
   const completedCount = orders.filter((o) => o.status === "COMPLETED").length;
 
   return (
-    <div className="min-h-screen bg-muted/20 text-foreground flex flex-col font-sans">
+    <div className="min-h-screen bg-muted/20 text-foreground flex flex-col font-sans overflow-x-hidden">
       {/* Executive Command Header - Ultra-Transparent Glass */}
-      <header className="sticky top-0 z-40 bg-white/40 dark:bg-black/50 backdrop-blur-3xl border-b border-white/30 dark:border-white/10 shadow-xs transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 sm:h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+      <header className="sticky top-0 z-40 bg-white/60 dark:bg-black/60 backdrop-blur-3xl border-b border-white/30 dark:border-white/10 shadow-xs transition-all">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-15 sm:h-20 flex items-center justify-between gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+            <div className="relative shrink-0">
               <img
                 src={brandIcon}
                 alt="Affordable Laundry"
-                className="w-10 h-10 rounded-2xl object-cover border border-sky-400/40 shadow-xs"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl object-cover border border-sky-400/40 shadow-xs"
               />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-background" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-sky-500 border-2 border-background" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-base tracking-tight text-foreground">
-                  Affordable Laundry HQ
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="font-extrabold text-xs sm:text-base tracking-tight text-foreground truncate max-w-[120px] xs:max-w-none">
+                  Admin HQ
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30">
-                  Admin Command Center
+                <span className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-wider bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30 shrink-0">
+                  Command
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground hidden sm:block">
-                Master dispatch, live Firestore orders, rider assignments & operations
+              <p className="text-[11px] text-muted-foreground hidden sm:block truncate">
+                Master dispatch, live Firestore orders & operations
               </p>
             </div>
           </div>
 
           {/* Right Action Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <Button
               onClick={() => setCreateOrderModalOpen(true)}
               size="sm"
-              className="rounded-2xl text-xs font-bold shadow-md bg-sky-500 hover:bg-sky-400 text-white gap-1.5 h-9 sm:h-10 px-4 shadow-sky-500/25 transition-transform hover:scale-105 active:scale-95"
+              className="rounded-xl sm:rounded-2xl text-xs font-bold shadow-md bg-sky-500 hover:bg-sky-400 text-white gap-1 h-8 sm:h-10 px-2 sm:px-4 shadow-sky-500/25 transition-transform hover:scale-105 active:scale-95"
+              title="New intake order"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">New Intake Order</span>
-              <span className="sm:hidden">Intake</span>
+              <span className="sm:hidden text-[10px] xs:text-[11px]">Intake</span>
             </Button>
 
             <NotificationCenter />
@@ -589,107 +590,118 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
               variant="outline"
               size="sm"
               onClick={onBackToLanding}
-              className="rounded-2xl text-xs font-semibold h-9 sm:h-10 px-3 bg-white/20 hover:bg-white/35 backdrop-blur-xl border border-white/25 text-foreground"
-              title="Return to marketing website"
+              className="rounded-xl sm:rounded-2xl text-xs font-semibold h-8 sm:h-10 px-2 sm:px-3 bg-white/20 hover:bg-white/35 backdrop-blur-xl border border-white/25 text-foreground"
+              title="Return to website"
             >
-              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-              <span className="hidden md:inline">Website</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden md:inline ml-1">Website</span>
             </Button>
 
             <Button
               variant="ghost"
               size="sm"
               onClick={logout}
-              className="rounded-2xl text-xs font-medium text-destructive hover:bg-destructive/10 h-9 sm:h-10 px-3"
+              className="rounded-xl sm:rounded-2xl text-xs font-medium text-destructive hover:bg-destructive/10 h-8 sm:h-10 px-2 sm:px-3"
+              title="Sign Out"
             >
-              <LogOut className="w-3.5 h-3.5 mr-1" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline ml-1">Sign Out</span>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Main Executive Body */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-2.5 sm:px-6 lg:px-8 py-3.5 sm:py-8 space-y-3.5 sm:space-y-8">
         {/* Executive Stats Bar - Ultra-Transparent Floating Glass Cards */}
-        <section className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
-          <div className="p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+        <section className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
+          <div className="p-2.5 sm:p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-2xl sm:rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl transition-all duration-300 group relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/10 rounded-full blur-2xl pointer-events-none" />
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
+            <span className="text-[9px] sm:text-[11px] font-bold text-muted-foreground uppercase tracking-wider block truncate">
               Total Bookings
             </span>
-            <p className="text-2xl sm:text-3xl font-black text-foreground mt-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+            <p className="text-lg sm:text-3xl font-black text-foreground mt-0.5 sm:mt-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
               {orders.length}
             </p>
-            <span className="text-[10px] text-muted-foreground">All Kumasi orders</span>
+            <span className="text-[8px] sm:text-[10px] text-muted-foreground block truncate">
+              All Kumasi orders
+            </span>
           </div>
 
-          <div className="p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+          <div className="p-2.5 sm:p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-2xl sm:rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl transition-all duration-300 group relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/15 rounded-full blur-2xl pointer-events-none" />
-            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">
+            <span className="text-[9px] sm:text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block truncate">
               Pending Pickup
             </span>
-            <p className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 mt-1">
+            <p className="text-lg sm:text-3xl font-black text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-1">
               {pendingCount}
             </p>
-            <span className="text-[10px] text-muted-foreground">Awaiting courier</span>
+            <span className="text-[8px] sm:text-[10px] text-muted-foreground block truncate">
+              Awaiting courier
+            </span>
           </div>
 
-          <div className="p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+          <div className="p-2.5 sm:p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-2xl sm:rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl transition-all duration-300 group relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/15 rounded-full blur-2xl pointer-events-none" />
-            <span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider block">
+            <span className="text-[9px] sm:text-[11px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider block truncate">
               In Wash & Care
             </span>
-            <p className="text-2xl sm:text-3xl font-black text-cyan-600 dark:text-cyan-400 mt-1">
+            <p className="text-lg sm:text-3xl font-black text-cyan-600 dark:text-cyan-400 mt-0.5 sm:mt-1">
               {washingCount}
             </p>
-            <span className="text-[10px] text-muted-foreground">Treatment stations</span>
+            <span className="text-[8px] sm:text-[10px] text-muted-foreground block truncate">
+              Treatment stations
+            </span>
           </div>
 
-          <div className="p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+          <div className="p-2.5 sm:p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-2xl sm:rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl transition-all duration-300 group relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/15 rounded-full blur-2xl pointer-events-none" />
-            <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider block">
+            <span className="text-[9px] sm:text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider block truncate">
               Ready / Out
             </span>
-            <p className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400 mt-1">
+            <p className="text-lg sm:text-3xl font-black text-purple-600 dark:text-purple-400 mt-0.5 sm:mt-1">
               {readyOrTransitCount}
             </p>
-            <span className="text-[10px] text-muted-foreground">On courier route</span>
+            <span className="text-[8px] sm:text-[10px] text-muted-foreground block truncate">
+              On courier route
+            </span>
           </div>
 
-          <div className="p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden col-span-2 md:col-span-1">
-            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
+          <div className="p-2.5 sm:p-5 bg-white/40 dark:bg-white/5 backdrop-blur-3xl rounded-2xl sm:rounded-3xl border border-white/40 dark:border-white/10 shadow-xl hover:shadow-2xl transition-all duration-300 group relative overflow-hidden col-span-2 md:col-span-1">
+            <span className="text-[9px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block truncate">
               Total Revenue
             </span>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+            <p className="text-lg sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-1">
               GHC {totalRevenue}
             </p>
-            <span className="text-[10px] text-muted-foreground">{completedCount} delivered</span>
+            <span className="text-[8px] sm:text-[10px] text-muted-foreground block truncate">
+              {completedCount} delivered
+            </span>
           </div>
         </section>
 
         {/* Search, Filter & Bulk Dispatch Controls - Translucent Glass Box */}
-        <section className="bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        <section className="bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-xl space-y-2.5 sm:space-y-4">
+          <div className="flex flex-col md:flex-row gap-2 sm:gap-3 items-stretch md:items-center justify-between">
             {/* Search Input */}
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3.5" />
+              <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground absolute left-3 top-3 sm:top-3.5" />
               <input
                 type="text"
-                placeholder="Search orders by customer name, phone, order #, or hall/location..."
+                placeholder="Search orders by customer, phone, #, or location..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-11 pl-10 pr-4 rounded-2xl border border-white/30 bg-white/30 dark:bg-white/5 backdrop-blur-xl text-xs sm:text-sm text-foreground focus:ring-2 focus:ring-sky-500/20 focus:outline-hidden"
+                className="w-full h-9.5 sm:h-11 pl-9 sm:pl-10 pr-3 sm:pr-4 rounded-xl sm:rounded-2xl border border-white/30 bg-white/35 dark:bg-white/5 backdrop-blur-xl text-xs sm:text-sm text-foreground focus:ring-2 focus:ring-sky-500/20 focus:outline-hidden"
               />
             </div>
 
             {/* Filter by Status Dropdown */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-11 px-3.5 rounded-2xl border border-white/30 bg-white/30 dark:bg-white/10 backdrop-blur-xl text-xs font-semibold text-foreground focus:ring-2 focus:ring-sky-500/20 focus:outline-hidden"
+                className="w-full md:w-auto h-9.5 sm:h-11 px-3 rounded-xl sm:rounded-2xl border border-white/30 bg-white/35 dark:bg-white/10 backdrop-blur-xl text-xs font-semibold text-foreground focus:ring-2 focus:ring-sky-500/20 focus:outline-hidden truncate"
               >
                 <option value="ALL">All Statuses ({orders.length})</option>
                 {STATUS_OPTIONS.map((opt) => (
@@ -768,34 +780,34 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
               return (
                 <div
                   key={order.docId}
-                  className={`p-5 sm:p-6 bg-white/45 dark:bg-white/5 backdrop-blur-3xl border rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 ${
+                  className={`p-3.5 sm:p-6 bg-white/45 dark:bg-white/5 backdrop-blur-3xl border rounded-2xl sm:rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 ${
                     selectedIds.has(order.docId)
                       ? "border-sky-500/70 bg-sky-500/10"
                       : "border-white/40 dark:border-white/10 hover:border-sky-400/50"
                   }`}
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
                     {/* Checkbox & Order Info */}
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
                       <button
                         type="button"
                         onClick={() => toggleSelect(order.docId)}
-                        className="mt-1 text-muted-foreground hover:text-foreground"
+                        className="mt-1 text-muted-foreground hover:text-foreground shrink-0"
                       >
                         {selectedIds.has(order.docId) ? (
-                          <CheckSquare className="w-5 h-5 text-sky-500" />
+                          <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-sky-500" />
                         ) : (
-                          <Square className="w-5 h-5" />
+                          <Square className="w-4 h-4 sm:w-5 sm:h-5" />
                         )}
                       </button>
 
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <span className="font-mono font-bold text-foreground text-sm">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-foreground text-xs sm:text-sm">
                             #{order.id}
                           </span>
                           <span
-                            className={`px-3 py-0.5 rounded-full text-xs font-bold border ${statusCfg.badge}`}
+                            className={`px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold border ${statusCfg.badge}`}
                           >
                             {statusCfg.label}
                           </span>
@@ -804,7 +816,7 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
                           </span>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           <span className="font-bold text-foreground">{order.customerName}</span>
                           <a
                             href={`tel:${order.customerPhone}`}
@@ -829,7 +841,7 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
                     </div>
 
                     {/* Stage Switcher Dropdown, One-Click Advance Button & Notes */}
-                    <div className="flex flex-wrap items-center gap-2 self-end lg:self-center">
+                    <div className="w-full lg:w-auto grid grid-cols-1 sm:grid-cols-3 lg:flex items-stretch sm:items-center gap-2 pt-2.5 border-t border-white/15 lg:border-0 lg:pt-0">
                       {NEXT_STAGE_MAP[order.status] && (
                         <Button
                           size="sm"
@@ -839,11 +851,11 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
                               NEXT_STAGE_MAP[order.status]!.next,
                             )
                           }
-                          className={`rounded-2xl text-xs font-extrabold h-10 px-3.5 shadow-sm gap-1.5 transition-transform hover:scale-105 active:scale-95 ${NEXT_STAGE_MAP[order.status]!.btnClass}`}
+                          className={`w-full rounded-xl sm:rounded-2xl text-xs font-black h-10 px-3.5 shadow-xs gap-1.5 justify-center transition-transform hover:scale-105 active:scale-95 ${NEXT_STAGE_MAP[order.status]!.btnClass}`}
                           title={`Advance to ${NEXT_STAGE_MAP[order.status]!.label} and notify customer`}
                         >
-                          <span>{NEXT_STAGE_MAP[order.status]!.label}</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                          <span className="truncate">{NEXT_STAGE_MAP[order.status]!.label}</span>
+                          <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                         </Button>
                       )}
 
@@ -855,7 +867,7 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
                             e.target.value as OrderRecord["status"],
                           )
                         }
-                        className="h-10 px-3 rounded-2xl border border-white/30 bg-white/40 dark:bg-white/10 backdrop-blur-xl text-xs font-bold text-foreground focus:ring-2 focus:ring-sky-500/20"
+                        className="w-full lg:w-auto h-10 px-3 rounded-xl sm:rounded-2xl border border-white/30 bg-white/40 dark:bg-white/10 backdrop-blur-xl text-xs font-bold text-foreground focus:ring-2 focus:ring-sky-500/20 truncate"
                         title="Set exact order stage"
                       >
                         {STATUS_OPTIONS.map((opt) => (
@@ -869,7 +881,7 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => handleOpenEdit(order)}
-                        className="rounded-2xl text-xs font-bold h-10 px-3.5 bg-white/20 hover:bg-white/35 backdrop-blur-xl border border-white/30"
+                        className="w-full lg:w-auto rounded-xl sm:rounded-2xl text-xs font-bold h-10 px-3.5 bg-white/20 hover:bg-white/35 backdrop-blur-xl border border-white/30 justify-center"
                       >
                         Dispatch / Notes
                       </Button>
@@ -885,14 +897,14 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
       {/* Edit Dispatch / Courier Modal */}
       {editingOrder && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setEditingOrder(null);
           }}
         >
-          <div className="relative w-full max-w-md bg-white/95 dark:bg-black/90 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-2xl p-6 sm:p-7 space-y-5">
+          <div className="relative w-full max-w-md bg-white/95 dark:bg-black/90 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-2xl p-4.5 sm:p-7 max-h-[92vh] overflow-y-auto space-y-4 sm:space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h3 className="text-lg font-bold text-foreground">
+              <h3 className="text-base sm:text-lg font-bold text-foreground">
                 Dispatch Order #{editingOrder.id}
               </h3>
               <button
@@ -962,12 +974,12 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
       {/* New Walk-in / Phone Order Intake Modal */}
       {createOrderModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setCreateOrderModalOpen(false);
           }}
         >
-          <div className="relative w-full max-w-lg bg-white/95 dark:bg-black/90 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto space-y-5">
+          <div className="relative w-full max-w-lg bg-white/95 dark:bg-black/90 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-2xl p-4.5 sm:p-8 max-h-[92vh] overflow-y-auto space-y-4 sm:space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-primary">
