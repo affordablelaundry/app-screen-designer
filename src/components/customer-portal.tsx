@@ -43,6 +43,7 @@ import {
   triggerDeviceNotification,
   setupCustomerOrderNotifications,
   addTrackedOrderId,
+  requestDeviceNotificationPermission,
 } from "@/lib/order-notifications";
 
 export type OrderRecord = {
@@ -453,6 +454,20 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
 
       // Track order on this device for background push notifications
       addTrackedOrderId(newOrderId);
+
+      // Prompt native device notification permission so alerts pop up whether inside or outside the app
+      if (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        Notification.permission === "default"
+      ) {
+        try {
+          await requestDeviceNotificationPermission();
+        } catch {
+          // ignore
+        }
+      }
+
       triggerDeviceNotification(
         `Affordable Laundry: Collection Scheduled!`,
         `Order #${newOrderId} is booked. We will notify you at every step: clothes received, washing, and delivery!`,

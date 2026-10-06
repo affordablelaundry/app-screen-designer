@@ -147,6 +147,22 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          console.debug(
+            "Service Worker registered for native background notifications:",
+            reg.scope,
+          );
+        })
+        .catch((err) => {
+          console.debug("Service Worker registration notice:", err);
+        });
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

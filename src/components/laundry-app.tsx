@@ -49,6 +49,8 @@ import {
   broadcastOrderEvent,
   playNotificationChime,
   getStatusFriendlyText,
+  requestDeviceNotificationPermission,
+  getDeviceNotificationPermission,
 } from "@/lib/order-notifications";
 
 import heroAtelierImage from "@/assets/images/ghanaian_hero_1790975886532.jpg";
@@ -192,6 +194,9 @@ export function LaundryApp() {
   // 1. Admin gets pop up notification whenever any customer books an order
   // 2. Customer gets pop up notification whenever admin updates their order process
   useEffect(() => {
+    // When inside the dashboard, AdminDashboard or CustomerPortal handles view-specific toast actions
+    if (currentView === "dashboard") return;
+
     if (isAdmin) {
       const unsubAdmin = setupAdminOrderNotifications((booking) => {
         toast.info(
@@ -222,7 +227,7 @@ export function LaundryApp() {
       );
       return () => unsubCustomer();
     }
-  }, [isAdmin, user?.uid, user?.email, profile?.email]);
+  }, [isAdmin, user?.uid, user?.email, profile?.email, currentView]);
 
   // Check if notification permission prompt is needed on new device
   const handleNavigateToDashboard = () => {
@@ -398,6 +403,20 @@ export function LaundryApp() {
 
     // Register this order on this device for live background push notifications
     addTrackedOrderId(newBookingId);
+
+    // Prompt native notification permission so alerts pop up whether inside or outside the app
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "default"
+    ) {
+      try {
+        await requestDeviceNotificationPermission();
+      } catch {
+        // ignore
+      }
+    }
+
     triggerDeviceNotification(
       `Affordable Laundry: Pickup Booked!`,
       `Order #${newBookingId} is set for ${date}. We'll notify your phone when the rider is coming.`,
@@ -767,22 +786,22 @@ export function LaundryApp() {
       {/* Main Landing Sections */}
       <main className="w-full overflow-x-hidden">
         {/* Full Screen Width Hero Canvas with Curled, Animated Bottom Edge */}
-        <section className="relative w-full overflow-hidden pt-20 sm:pt-24 pb-14 sm:pb-24 group">
-          {/* High-Resolution Ghanaian Laundry Specialists Atelier Photo */}
+        <section className="relative w-full overflow-hidden pt-16 sm:pt-28 pb-10 sm:pb-24 group">
+          {/* High-Resolution Ghanaian Laundry Specialists Atelier Photo - Optimized for portrait mobile screens */}
           <img
             src={heroAtelierImage}
             alt="Affordable Laundry Friendly Ghanaian Team in Kumasi Atelier"
-            className="absolute inset-0 w-full h-full object-cover object-center scale-100 transition-transform duration-1000 group-hover:scale-105"
+            className="absolute inset-0 w-full h-full object-cover object-[center_25%] sm:object-center transition-transform duration-1000 group-hover:scale-105"
             loading="eager"
             decoding="async"
           />
 
-          {/* Deep Cinematic Gradient Overlays for High Legibility & Warmth */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/92 via-black/75 to-black/50 sm:from-black/88 sm:via-black/72 sm:to-black/40" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/35" />
+          {/* Cinematic Gradient Overlays: Clear and warm on mobile so team is visible, with high legibility */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80 sm:bg-gradient-to-r sm:from-black/90 sm:via-black/72 sm:to-black/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/15" />
 
-          {/* Hero Content Container Positioned on Top */}
-          <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-10 sm:py-16 lg:py-20 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+          {/* Hero Content Container Positioned on Top - Balanced for slim portrait phone screens */}
+          <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-16 lg:py-20 space-y-4 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
             {/* Kicker Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/25 text-white text-xs font-bold uppercase tracking-widest shadow-xl">
               <span>Fast Laundry Pickup & Delivery in KNUST</span>
@@ -818,24 +837,6 @@ export function LaundryApp() {
               >
                 See Simple Prices
               </Button>
-            </div>
-
-            {/* 3 Strategic Key Highlights - Ultra-Clean Translucent Glassmorphic Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 sm:pt-6 max-w-3xl">
-              <div className="p-4 rounded-2xl bg-white/15 dark:bg-white/5 backdrop-blur-2xl border border-white/25 text-white shadow-2xl hover:bg-white/25 hover:scale-[1.02] transition-all">
-                <span className="text-xl sm:text-2xl font-black text-white block">GHC 4</span>
-                <span className="text-xs text-white/90 font-medium">Per T-shirt</span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white/15 dark:bg-white/5 backdrop-blur-2xl border border-white/25 text-white shadow-2xl hover:bg-white/25 hover:scale-[1.02] transition-all">
-                <span className="text-xl sm:text-2xl font-black text-white block">1 to 2 Days</span>
-                <span className="text-xs text-white/90 font-medium">Fast & ready</span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-white/15 dark:bg-white/5 backdrop-blur-2xl border border-white/25 text-white shadow-2xl hover:bg-white/25 hover:scale-[1.02] transition-all">
-                <span className="text-xl sm:text-2xl font-black text-white block">Free</span>
-                <span className="text-xs text-white/90 font-medium">Campus pickup</span>
-              </div>
             </div>
           </div>
 

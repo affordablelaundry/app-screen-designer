@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, where, orderBy, limit } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 
 export interface StoredNotification {
@@ -15,6 +15,49 @@ export interface StoredNotification {
 const STORAGE_KEY_ORDERS = "al_tracked_order_ids";
 const STORAGE_KEY_NOTIFS = "al_device_notifications";
 const STORAGE_KEY_PREF = "al_notification_permission_requested";
+const DEDUPE_STORAGE_KEY = "al_dispatched_alerts_cache";
+
+// Module-level deduplication singletons
+const globalDispatchedNotifications = new Map<string, number>();
+const globalAdminAlertTimestamps = new Map<string, number>();
+const globalCustomerAlertTimestamps = new Map<string, number>();
+
+// Persistent cross-tab and cross-window deduplication checker
+// Guarantees zero double notifications even if multiple browser tabs are open
+function isAlertDuplicate(dedupeKey: string, cooldownMs = 12000): boolean {
+  const now = Date.now();
+  // 1. In-memory check for current window
+  const lastMemory = globalDispatchedNotifications.get(dedupeKey) || 0;
+  if (now - lastMemory < cooldownMs) {
+    return true;
+  }
+  globalDispatchedNotifications.set(dedupeKey, now);
+
+  // 2. Cross-tab persistent check in localStorage
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(DEDUPE_STORAGE_KEY);
+      const cache: Record<string, number> = raw ? JSON.parse(raw) : {};
+      const lastLocal = cache[dedupeKey] || 0;
+      if (now - lastLocal < cooldownMs) {
+        return true;
+      }
+      // Prune keys older than 60 seconds to keep storage clean
+      const pruned: Record<string, number> = {};
+      for (const [k, v] of Object.entries(cache)) {
+        if (now - v < 60000) {
+          pruned[k] = v;
+        }
+      }
+      pruned[dedupeKey] = now;
+      localStorage.setItem(DEDUPE_STORAGE_KEY, JSON.stringify(pruned));
+    } catch {
+      // ignore
+    }
+  }
+
+  return false;
+}
 
 // Web Audio API notification chime (reliable, zero external network dependency)
 export function playNotificationChime() {
@@ -163,19 +206,31 @@ export function markAllNotificationsRead() {
   }
 }
 
-// Trigger device notification with fallback
-export function triggerDeviceNotification(
+// Register Service Worker for true background native device notifications
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+// Trigger device notification with Service Worker background support and strict 12s deduplication
+export async function triggerDeviceNotification(
   title: string,
   body: string,
   orderId: string,
   status: string,
   type: "customer_update" | "admin_new_order" = "customer_update",
 ) {
+  const dedupeKey = `${type}:${orderId}:${status}`;
+
+  // Strict global persistent deduplication across all tabs & windows on this device
+  if (isAlertDuplicate(dedupeKey, 12000)) {
+    return;
+  }
+
   playNotificationChime();
 
   if (typeof window !== "undefined" && "navigator" in window && "vibrate" in navigator) {
     try {
-      navigator.vibrate([150, 75, 150]);
+      navigator.vibrate([200, 100, 200]);
     } catch {
       // ignore
     }
@@ -190,25 +245,67 @@ export function triggerDeviceNotification(
     type,
   });
 
+  // Native system notification that pops up on lock screen/tray whether user is in the app or not
   if (
     typeof window !== "undefined" &&
     "Notification" in window &&
     Notification.permission === "granted"
   ) {
-    try {
-      const notif = new Notification(title, {
-        body,
-        icon: "/src/assets/affordable-laundry-icon.jpg",
-        badge: "/src/assets/affordable-laundry-icon.jpg",
-        tag: `order-${orderId}-${Date.now()}`,
-      });
+    const notifOptions: NotificationOptions = {
+      body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      // Consistent order-level tag ensures Android OS replaces previous notification rather than doubling
+      tag: `al-order-${orderId}`,
+      data: {
+        url: "/#dashboard",
+        orderId,
+      },
+    };
 
-      notif.onclick = () => {
-        window.focus();
-        window.location.hash = "#dashboard";
-      };
-    } catch (err) {
-      console.debug("Native Notification error:", err);
+    let notificationShown = false;
+
+    // 1. Primary: Use Service Worker registration (Shows on lock screen & outside the app on Android/iOS/Desktop)
+    if ("serviceWorker" in navigator) {
+      try {
+        const reg = await Promise.race([
+          navigator.serviceWorker.getRegistration(),
+          navigator.serviceWorker.ready,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)),
+        ]);
+        if (reg && "showNotification" in reg) {
+          await reg.showNotification(title, notifOptions);
+          notificationShown = true;
+        }
+      } catch (err) {
+        console.debug("ServiceWorker showNotification note:", err);
+      }
+
+      // Also message service worker active client for background processing
+      try {
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: "SHOW_NOTIFICATION",
+            title,
+            options: notifOptions,
+          });
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 2. Fallback ONLY if Service Worker did not display it
+    if (!notificationShown) {
+      try {
+        const notif = new Notification(title, notifOptions);
+        notif.onclick = () => {
+          window.focus();
+          window.location.hash = "#dashboard";
+        };
+      } catch (err) {
+        console.debug("Native Notification fallback note:", err);
+      }
     }
   }
 }
@@ -333,7 +430,6 @@ export function setupAdminOrderNotifications(
   if (typeof window === "undefined") return () => {};
 
   const knownOrderIds = new Set<string>();
-  const recentAlertTimestamps = new Map<string, number>();
   let isInitialLoad = true;
 
   const notifyAdmin = (booking: {
@@ -343,15 +439,11 @@ export function setupAdminOrderNotifications(
     location: string;
     total: number;
   }) => {
-    const key = booking.orderId;
-    const now = Date.now();
-    const lastNotified = recentAlertTimestamps.get(key) || 0;
-    if (now - lastNotified < 4500) {
-      return; // Skip duplicate notification within 4.5s
+    const dedupeKey = `admin_alert:${booking.orderId}`;
+    if (isAlertDuplicate(dedupeKey, 12000)) {
+      return; // Skip duplicate notification within 12s across all windows
     }
-    recentAlertTimestamps.set(key, now);
 
-    playNotificationChime();
     triggerDeviceNotification(
       `🔔 New Customer Booking #${booking.orderId}`,
       `${booking.customerName} placed a booking for ${booking.itemCount} items at ${booking.location} (GHC ${booking.total}).`,
@@ -517,16 +609,12 @@ export function setupCustomerOrderNotifications(
   const cleanEmail = userIdentifier.email?.trim().toLowerCase();
   const cleanUid = userIdentifier.userId;
   const previousStatuses: Record<string, string> = {};
-  const recentAlertTimestamps = new Map<string, number>();
 
   const notifyCustomer = (orderId: string, newStatus: string, stageNotes?: string) => {
-    const dedupeKey = `${orderId}:${newStatus}`;
-    const now = Date.now();
-    const lastNotified = recentAlertTimestamps.get(dedupeKey) || 0;
-    if (now - lastNotified < 4500) {
-      return; // Skip duplicate notification within 4.5s
+    const dedupeKey = `customer_update:${orderId}:${newStatus}`;
+    if (isAlertDuplicate(dedupeKey, 12000)) {
+      return; // Skip duplicate notification within 12s across all tabs & listeners
     }
-    recentAlertTimestamps.set(dedupeKey, now);
 
     const { title, body } = getStatusCustomerMessage(newStatus, orderId, stageNotes);
     triggerDeviceNotification(title, body, orderId, newStatus);
