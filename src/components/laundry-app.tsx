@@ -1387,7 +1387,7 @@ export function LaundryApp() {
                       required
                       defaultValue={profile?.displayName || user?.displayName || ""}
                       placeholder="e.g. Kwame Mensah"
-                      className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                      className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-base sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div>
@@ -1398,7 +1398,7 @@ export function LaundryApp() {
                       type="tel"
                       defaultValue={profile?.phone || ""}
                       placeholder="053 233 1150"
-                      className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                      className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-base sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                 </div>
@@ -1424,7 +1424,7 @@ export function LaundryApp() {
                     type="date"
                     required
                     defaultValue={new Date().toISOString().split("T")[0]}
-                    className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                    className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-base sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
 

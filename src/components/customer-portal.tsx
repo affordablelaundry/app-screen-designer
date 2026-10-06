@@ -1087,7 +1087,7 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                     name="name"
                     required
                     defaultValue={profile?.displayName || user.displayName || ""}
-                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-hidden"
+                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-base sm:text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-hidden"
                   />
                 </div>
                 <div>
@@ -1100,7 +1100,7 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                     inputMode="tel"
                     defaultValue={profile?.phone || ""}
                     placeholder="053 233 1150"
-                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-hidden"
+                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-base sm:text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-hidden"
                   />
                 </div>
               </div>
@@ -1126,7 +1126,7 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
                     type="date"
                     required
                     defaultValue={new Date().toISOString().split("T")[0]}
-                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-hidden"
+                    className="w-full h-10 px-3 rounded-xl border border-input bg-background text-base sm:text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:outline-hidden"
                   />
                 </div>
               </div>

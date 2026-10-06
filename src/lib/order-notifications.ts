@@ -156,7 +156,7 @@ export function syncTrackedOrdersWithServiceWorker() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
   try {
     const tracked = getTrackedOrderIds();
-    const ordersToSync: { id: string; status?: string }[] = [];
+    const ordersToSync: { id: string; status?: string; lastNotifiedStatus?: string }[] = [];
     const rawCache = localStorage.getItem("al_orders_cache");
     const cacheMap: Record<string, string> = {};
     if (rawCache) {
@@ -170,9 +170,31 @@ export function syncTrackedOrdersWithServiceWorker() {
       }
     }
     tracked.forEach((id) => {
-      ordersToSync.push({ id, status: cacheMap[id] || "" });
+      ordersToSync.push({
+        id,
+        status: cacheMap[id] || "",
+        lastNotifiedStatus: cacheMap[id] || "",
+      });
     });
 
+    // 1. Direct write to persistent CacheStorage shared with Service Worker
+    if ("caches" in window) {
+      window.caches
+        .open("al-tracked-orders-v2")
+        .then((cache) => {
+          cache
+            .put(
+              "/al-orders-tracking.json",
+              new Response(JSON.stringify(ordersToSync), {
+                headers: { "Content-Type": "application/json" },
+              }),
+            )
+            .catch(() => {});
+        })
+        .catch(() => {});
+    }
+
+    // 2. Post message to active Service Worker controller
     if (navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
         type: "TRACK_ORDERS",
@@ -181,27 +203,54 @@ export function syncTrackedOrdersWithServiceWorker() {
     }
 
     navigator.serviceWorker.ready
-      .then((reg) => {
+      .then(async (reg) => {
         if (reg.active) {
           reg.active.postMessage({
             type: "TRACK_ORDERS",
             orders: ordersToSync,
           });
         }
+        // 3. Register Periodic Background Sync (specifically granted by Chrome/Android to home-screen PWAs!)
         if ("periodicSync" in reg) {
-          (
-            reg as unknown as {
-              periodicSync: { register: (tag: string, opt: object) => Promise<void> };
-            }
-          ).periodicSync
-            .register("check-order-updates", { minInterval: 60 * 1000 })
-            .catch(() => {});
+          try {
+            await (
+              reg as unknown as {
+                periodicSync: { register: (tag: string, opt: object) => Promise<void> };
+              }
+            ).periodicSync.register("check-order-updates", { minInterval: 15 * 1000 });
+          } catch {
+            // ignore
+          }
+        }
+        // 4. Register one-off Background Sync
+        if ("sync" in reg) {
+          try {
+            await (
+              reg as unknown as {
+                sync: { register: (tag: string) => Promise<void> };
+              }
+            ).sync.register("check-order-updates");
+          } catch {
+            // ignore
+          }
         }
       })
       .catch(() => {});
   } catch {
     // ignore
   }
+}
+
+// Automatically sync when user leaves or closes the app
+if (typeof window !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      syncTrackedOrdersWithServiceWorker();
+    }
+  });
+  window.addEventListener("pagehide", () => {
+    syncTrackedOrdersWithServiceWorker();
+  });
 }
 
 export function removeTrackedOrderId(orderId: string): string[] {

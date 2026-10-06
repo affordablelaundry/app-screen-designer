@@ -1,7 +1,10 @@
 // Service Worker for Affordable Laundry Kumasi
 // Handles native device push and background notifications for order updates whether inside or outside the app
 
-const CACHE_NAME = "affordable-laundry-v3";
+const CACHE_NAME = "affordable-laundry-v4";
+const DATA_CACHE_NAME = "al-tracked-orders-v2";
+const DATA_CACHE_URL = "/al-orders-tracking.json";
+
 const PROJECT_ID = "gen-lang-client-0010839257";
 const DATABASE_ID = "ai-studio-appscreendesigne-8f99ab62-7d65-4c26-bd95-292417592eb7";
 const API_KEY = "AIzaSyAo7hYvxKTUG51Fu7FMxtJz7eH1VTP0X4Q";
@@ -16,8 +19,40 @@ const STATUS_LABELS = {
   CANCELLED: "Order Cancelled",
 };
 
-// Map of orderId -> lastKnownStatus
+// In-memory cache synced with persistent CacheStorage
 const trackedOrdersMap = new Map();
+
+// Read persistent tracked orders from CacheStorage
+async function getStoredTrackedOrders() {
+  try {
+    const cache = await caches.open(DATA_CACHE_NAME);
+    const resp = await cache.match(DATA_CACHE_URL);
+    if (resp) {
+      const data = await resp.json();
+      if (Array.isArray(data)) {
+        return data;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return [];
+}
+
+// Write persistent tracked orders to CacheStorage
+async function setStoredTrackedOrders(orders) {
+  try {
+    const cache = await caches.open(DATA_CACHE_NAME);
+    await cache.put(
+      DATA_CACHE_URL,
+      new Response(JSON.stringify(orders), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  } catch (e) {
+    // ignore
+  }
+}
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -27,8 +62,19 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// Check Firestore REST API for updates to all tracked orders
 async function checkOrderUpdates() {
+  // 1. Load persistent tracked orders from disk
+  const storedList = await getStoredTrackedOrders();
+  for (const item of storedList) {
+    if (item && item.id && !trackedOrdersMap.has(item.id)) {
+      trackedOrdersMap.set(item.id, item.lastNotifiedStatus || item.status || "");
+    }
+  }
+
   if (trackedOrdersMap.size === 0) return;
+
+  let hasUpdates = false;
 
   for (const [orderId, lastStatus] of trackedOrdersMap.entries()) {
     try {
@@ -40,8 +86,11 @@ async function checkOrderUpdates() {
       const currentStatus = data.fields?.status?.stringValue;
       const stageNotes = data.fields?.stageNotes?.stringValue;
 
+      // Status has progressed and differs from last recorded notification
       if (currentStatus && lastStatus && currentStatus !== lastStatus) {
         trackedOrdersMap.set(orderId, currentStatus);
+        hasUpdates = true;
+
         const friendly = STATUS_LABELS[currentStatus] || currentStatus.replace(/_/g, " ");
         const title = `Order #${orderId}: ${friendly}`;
         const body =
@@ -51,25 +100,44 @@ async function checkOrderUpdates() {
           body,
           icon: "/icon-192.png",
           badge: "/icon-192.png",
-          vibrate: [200, 100, 200],
+          vibrate: [250, 150, 250],
           tag: `al-order-${orderId}`,
+          renotify: true,
+          requireInteraction: true,
           data: { url: "/#dashboard", orderId },
         });
       } else if (currentStatus && !lastStatus) {
+        // Record current status as baseline
         trackedOrdersMap.set(orderId, currentStatus);
+        hasUpdates = true;
       }
     } catch (e) {
-      // offline or network hiccup, skip silently
+      // Offline or network hiccup, skip silently
     }
+  }
+
+  // Persist updated status map back to disk
+  if (hasUpdates) {
+    const updatedToStore = [];
+    for (const [id, st] of trackedOrdersMap.entries()) {
+      updatedToStore.push({ id, status: st, lastNotifiedStatus: st });
+    }
+    await setStoredTrackedOrders(updatedToStore);
   }
 }
 
-// Background polling loop while service worker is active
-setInterval(() => {
-  checkOrderUpdates().catch(() => {});
-}, 25000);
+// Rescheduling timer for background loop while worker process is alive
+let backgroundTimer = null;
+function scheduleBackgroundCheck(delayMs = 25000) {
+  if (backgroundTimer) clearTimeout(backgroundTimer);
+  backgroundTimer = setTimeout(async () => {
+    await checkOrderUpdates();
+    scheduleBackgroundCheck(25000);
+  }, delayMs);
+}
+scheduleBackgroundCheck(10000);
 
-// Listen for periodic background sync from Android Chrome / PWA
+// Listen for periodic background sync from Android Chrome / PWA when app is closed
 self.addEventListener("periodicsync", (event) => {
   if (event.tag === "check-order-updates") {
     event.waitUntil(checkOrderUpdates());
@@ -78,7 +146,7 @@ self.addEventListener("periodicsync", (event) => {
 
 // Listen for one-off background sync
 self.addEventListener("sync", (event) => {
-  if (event.tag === "check-orders") {
+  if (event.tag === "check-orders" || event.tag === "check-order-updates") {
     event.waitUntil(checkOrderUpdates());
   }
 });
@@ -91,20 +159,34 @@ self.addEventListener("message", (event) => {
     const list = event.data.orders || [];
     for (const item of list) {
       if (item && item.id) {
-        trackedOrdersMap.set(item.id, item.status || trackedOrdersMap.get(item.id) || "");
+        trackedOrdersMap.set(
+          item.id,
+          item.lastNotifiedStatus || item.status || trackedOrdersMap.get(item.id) || "",
+        );
       }
     }
-    event.waitUntil(checkOrderUpdates());
+    // Save to persistent storage immediately
+    event.waitUntil(
+      (async () => {
+        const toSave = [];
+        for (const [id, st] of trackedOrdersMap.entries()) {
+          toSave.push({ id, status: st, lastNotifiedStatus: st });
+        }
+        await setStoredTrackedOrders(toSave);
+        await checkOrderUpdates();
+      })(),
+    );
   } else if (event.data.type === "SHOW_NOTIFICATION") {
-    // Only triggered if page requested explicit service worker notification
     const { title, options } = event.data;
     const tag = options?.tag || `al-order-${options?.data?.orderId || "alert"}`;
     event.waitUntil(
       self.registration.showNotification(title, {
         icon: "/icon-192.png",
         badge: "/icon-192.png",
-        vibrate: [200, 100, 200],
+        vibrate: [250, 150, 250],
         tag,
+        renotify: true,
+        requireInteraction: true,
         ...options,
       }),
     );
@@ -119,7 +201,6 @@ self.addEventListener("notificationclick", (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // If a window is already open, focus it and navigate
       for (const client of clientList) {
         if ("focus" in client) {
           if ("navigate" in client) {
@@ -128,7 +209,6 @@ self.addEventListener("notificationclick", (event) => {
           return client.focus();
         }
       }
-      // Otherwise open a new window
       if (self.clients.openWindow) {
         return self.clients.openWindow(targetUrl);
       }
@@ -138,24 +218,26 @@ self.addEventListener("notificationclick", (event) => {
 
 // Support for native push events from Web Push
 self.addEventListener("push", (event) => {
-  let data = {};
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch {
-      data = { title: "Order Update", body: event.data.text() };
-    }
-  }
-  const title = data.title || "Affordable Laundry Update";
-  const orderId = data.orderId || data.data?.orderId || "update";
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: data.body || "Your order status has been updated.",
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
-      vibrate: [200, 100, 200],
-      tag: `al-order-${orderId}`,
-      data: { url: "/#dashboard", ...data },
-    }),
+    (async () => {
+      await checkOrderUpdates();
+      if (event.data) {
+        try {
+          const data = event.data.json();
+          const orderId = data.orderId || data.data?.orderId || "update";
+          await self.registration.showNotification(data.title || "Affordable Laundry Update", {
+            body: data.body || "Your order status has been updated.",
+            icon: "/icon-192.png",
+            badge: "/icon-192.png",
+            vibrate: [250, 150, 250],
+            tag: `al-order-${orderId}`,
+            renotify: true,
+            data: { url: "/#dashboard", orderId },
+          });
+        } catch (e) {
+          // ignore
+        }
+      }
+    })(),
   );
 });

@@ -176,7 +176,7 @@ export function PlacesAutocomplete({
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
           autoComplete="off"
-          className={`w-full h-11 pl-9 pr-9 rounded-2xl border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/25 focus:border-primary transition-all shadow-xs ${className}`}
+          className={`w-full h-11 pl-9 pr-9 rounded-2xl border border-input bg-background text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/25 focus:border-primary transition-all shadow-xs ${className}`}
         />
         {inputValue && (
           <button
