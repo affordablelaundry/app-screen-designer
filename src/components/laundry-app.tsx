@@ -52,6 +52,7 @@ import {
   requestDeviceNotificationPermission,
   getDeviceNotificationPermission,
   notifyOrderApi,
+  shouldShowNotificationPrompt,
 } from "@/lib/order-notifications";
 
 import heroAtelierImage from "@/assets/images/ghanaian_hero_1790975886532.jpg";
@@ -163,6 +164,19 @@ export function LaundryApp() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("top");
   const [pendingOpenBookingAfterAuth, setPendingOpenBookingAfterAuth] = useState(false);
+
+  // Check whether to show the notification onboarding prompt on new device sign-in / sign-up
+  useEffect(() => {
+    if (user?.uid) {
+      if (shouldShowNotificationPrompt(user.uid)) {
+        setShowNotificationOnboarding(true);
+      } else {
+        setShowNotificationOnboarding(false);
+      }
+    } else {
+      setShowNotificationOnboarding(false);
+    }
+  }, [user]);
 
   // Track window scroll for transparent title bar on hero section & active nav item
   useEffect(() => {
@@ -438,17 +452,6 @@ export function LaundryApp() {
 
   // The admin gmail MUST have only ONE dashboard as admin, not 2 separate dashboards
   if (currentView === "dashboard") {
-    // If notification onboarding hasn't been completed on this device, prompt before showing dashboard
-    if (showNotificationOnboarding && user) {
-      return (
-        <NotificationOnboardingModal
-          userId={user.uid}
-          isOpen={true}
-          onComplete={() => setShowNotificationOnboarding(false)}
-        />
-      );
-    }
-
     if (isAdmin) {
       return (
         <>
@@ -461,6 +464,13 @@ export function LaundryApp() {
             }}
           />
           <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+          {showNotificationOnboarding && user && (
+            <NotificationOnboardingModal
+              userId={user.uid}
+              isOpen={true}
+              onComplete={() => setShowNotificationOnboarding(false)}
+            />
+          )}
         </>
       );
     }
@@ -480,6 +490,13 @@ export function LaundryApp() {
           onClose={() => setAuthModalOpen(false)}
           onSuccess={() => handleNavigateToDashboard()}
         />
+        {showNotificationOnboarding && user && (
+          <NotificationOnboardingModal
+            userId={user.uid}
+            isOpen={true}
+            onComplete={() => setShowNotificationOnboarding(false)}
+          />
+        )}
       </>
     );
   }
@@ -1469,6 +1486,15 @@ export function LaundryApp() {
           }
         }}
       />
+
+      {/* One-time notification onboarding modal on new device sign-in / sign-up */}
+      {showNotificationOnboarding && user && (
+        <NotificationOnboardingModal
+          userId={user.uid}
+          isOpen={true}
+          onComplete={() => setShowNotificationOnboarding(false)}
+        />
+      )}
     </div>
   );
 }

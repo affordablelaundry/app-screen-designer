@@ -875,3 +875,59 @@ export function setupCustomerOrderNotifications(
     unsubs.forEach((u) => u());
   };
 }
+
+const PROMPT_SEEN_KEY_PREFIX = "al_notif_prompt_seen_";
+const LAST_PERM_KEY_PREFIX = "al_notif_last_permission_";
+
+/**
+ * Checks whether the onboarding notification prompt should be displayed:
+ * - Pops up once when a user signs in/up on a new device
+ * - Never shows again unless the app was uninstalled (localStorage cleared)
+ *   or the browser notification settings changed
+ */
+export function shouldShowNotificationPrompt(userId: string): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  if (!("Notification" in window)) return false;
+
+  const currentPermission = Notification.permission;
+  const seenKey = `${PROMPT_SEEN_KEY_PREFIX}${userId}`;
+  const lastPermKey = `${LAST_PERM_KEY_PREFIX}${userId}`;
+
+  const hasSeen = localStorage.getItem(seenKey);
+  const recordedPerm = localStorage.getItem(lastPermKey);
+
+  // Case 1: First time on this device
+  if (!hasSeen) {
+    // If notifications are already granted on this browser, don't nag the user
+    if (currentPermission === "granted") {
+      try {
+        localStorage.setItem(seenKey, "true");
+        localStorage.setItem(lastPermKey, "granted");
+      } catch {
+        // ignore
+      }
+      return false;
+    }
+    return true;
+  }
+
+  // Case 2: Notification settings changed (e.g. user reset permissions in iOS/Android settings back to "default")
+  if (recordedPerm && recordedPerm !== currentPermission) {
+    if (currentPermission === "default") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function recordNotificationPromptDismissed(userId: string) {
+  if (typeof window === "undefined" || !userId) return;
+  try {
+    const currentPermission = "Notification" in window ? Notification.permission : "default";
+    localStorage.setItem(`${PROMPT_SEEN_KEY_PREFIX}${userId}`, "true");
+    localStorage.setItem(`${LAST_PERM_KEY_PREFIX}${userId}`, currentPermission);
+  } catch {
+    // ignore
+  }
+}
