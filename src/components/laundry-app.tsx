@@ -51,6 +51,7 @@ import {
   getStatusFriendlyText,
   requestDeviceNotificationPermission,
   getDeviceNotificationPermission,
+  notifyOrderApi,
 } from "@/lib/order-notifications";
 
 import heroAtelierImage from "@/assets/images/ghanaian_hero_1790975886532.jpg";
@@ -387,6 +388,11 @@ export function LaundryApp() {
       total,
       location,
       status: "COLLECTION_SCHEDULED",
+    });
+
+    // Send push notification to admins so they receive background alert even when phone is closed
+    notifyOrderApi("NEW_ORDER", [newBookingId]).catch((err) => {
+      console.debug("notifyOrderApi error:", err);
     });
 
     // Persist into unified order cache (ensures manual & Google accounts share exact same data)

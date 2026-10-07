@@ -1,5 +1,17 @@
 import { collection, doc, onSnapshot, query, where, orderBy, limit } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
+import { notifyOrderApi, resyncPushSubscription } from "@/lib/web-push";
+
+export { notifyOrderApi, resyncPushSubscription };
+
+// Automatically resync push subscription if permission was previously granted and user is authenticated
+if (typeof window !== "undefined") {
+  auth.onAuthStateChanged((user) => {
+    if (user && "Notification" in window && Notification.permission === "granted") {
+      resyncPushSubscription().catch(() => {});
+    }
+  });
+}
 
 export interface StoredNotification {
   id: string;

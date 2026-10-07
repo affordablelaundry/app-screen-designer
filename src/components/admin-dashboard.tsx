@@ -50,6 +50,7 @@ import {
   playNotificationChime,
   triggerDeviceNotification,
   setupAdminOrderNotifications,
+  notifyOrderApi,
 } from "@/lib/order-notifications";
 
 export type OrderRecord = {
@@ -342,6 +343,11 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
         stageNotes: stageMsg.body,
       });
 
+      // Send background push notification to customer phone via server API
+      notifyOrderApi("STATUS_UPDATE", [docId]).catch((err) => {
+        console.debug("notifyOrderApi error:", err);
+      });
+
       // Update local cache
       try {
         const raw = localStorage.getItem("al_orders_cache");
@@ -404,6 +410,12 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
       });
 
       await batch.commit();
+
+      // Send push notification to all affected customers' phones via server API
+      notifyOrderApi("STATUS_UPDATE", Array.from(selectedIds)).catch((err) => {
+        console.debug("notifyOrderApi bulk error:", err);
+      });
+
       toast.success(
         `Updated ${selectedIds.size} orders to ${getStatusFriendlyText(bulkStatus)}! Customers notified.`,
       );
@@ -448,6 +460,11 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
         }
       } catch {
         // ignore
+      }
+
+      // Notify customer if stageNotes were updated
+      if (stageNotes && stageNotes.trim() !== (editingOrder.stageNotes || "").trim()) {
+        notifyOrderApi("STATUS_UPDATE", [editingOrder.docId]).catch(() => {});
       }
 
       toast.success("Order dispatch details saved successfully.");

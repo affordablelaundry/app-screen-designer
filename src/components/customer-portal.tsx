@@ -44,6 +44,7 @@ import {
   setupCustomerOrderNotifications,
   addTrackedOrderId,
   requestDeviceNotificationPermission,
+  notifyOrderApi,
 } from "@/lib/order-notifications";
 
 export type OrderRecord = {
@@ -440,6 +441,11 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
         total: newOrderRecord.total,
         location: newOrderRecord.location,
         status: "COLLECTION_SCHEDULED",
+      });
+
+      // Dispatch server-side Web Push notification to admins so their phones alert even when closed
+      notifyOrderApi("NEW_ORDER", [newOrderId]).catch((err) => {
+        console.debug("notifyOrderApi error:", err);
       });
 
       // Persist in local cache for immediate availability
