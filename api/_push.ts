@@ -76,18 +76,15 @@ export function getStatusCustomerMessage(
   return { title, body };
 }
 
+export const DEFAULT_VAPID_PUBLIC_KEY =
+  "BCxZgwdc3RdO9K_zQbbBExOGhEd1eBSyrTWGYIFVxxkJM_395HBEaN6AiAoV-eeIOWN9QRpnk8RvSg2KBqAMCr4";
+export const DEFAULT_VAPID_PRIVATE_KEY = "pMlpFwNwISNwjsoEoI9F6-g6imTRDxHcnSR6jIZKVgo";
+
 // Initialize web-push VAPID details once
 function ensureVapidConfigured(): boolean {
   const vapidSubject = process.env.VAPID_SUBJECT || "mailto:affordablelaundry424@gmail.com";
-  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
-  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-
-  if (!vapidPublicKey || !vapidPrivateKey) {
-    console.warn(
-      "[web-push] Missing VAPID_PUBLIC_KEY or VAPID_PRIVATE_KEY in environment variables.",
-    );
-    return false;
-  }
+  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || DEFAULT_VAPID_PUBLIC_KEY;
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || DEFAULT_VAPID_PRIVATE_KEY;
 
   try {
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);

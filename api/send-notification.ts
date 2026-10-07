@@ -67,15 +67,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 2. Validate VAPID configuration
     const vapidSubject = process.env.VAPID_SUBJECT || "mailto:affordablelaundry424@gmail.com";
-    const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
-    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-
-    if (!vapidPublicKey || !vapidPrivateKey) {
-      return res.status(500).json({
-        error:
-          "Server configuration error: VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set in Vercel.",
-      });
-    }
+    const vapidPublicKey =
+      process.env.VAPID_PUBLIC_KEY ||
+      "BCxZgwdc3RdO9K_zQbbBExOGhEd1eBSyrTWGYIFVxxkJM_395HBEaN6AiAoV-eeIOWN9QRpnk8RvSg2KBqAMCr4";
+    const vapidPrivateKey =
+      process.env.VAPID_PRIVATE_KEY || "pMlpFwNwISNwjsoEoI9F6-g6imTRDxHcnSR6jIZKVgo";
 
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
