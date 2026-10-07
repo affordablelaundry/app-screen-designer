@@ -12,6 +12,8 @@ import {
   ShieldCheck,
   Smartphone,
   Laptop,
+  Download,
+  Share,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,12 +22,11 @@ import {
   addTrackedOrderId,
   removeTrackedOrderId,
   markAllNotificationsRead,
-  requestDeviceNotificationPermission,
-  getDeviceNotificationPermission,
-  triggerDeviceNotification,
   playNotificationChime,
+  triggerDeviceNotification,
   type StoredNotification,
 } from "@/lib/order-notifications";
+import { enableNotifications, getPwaState } from "@/lib/web-push";
 import { toast } from "sonner";
 
 interface NotificationCenterProps {
@@ -36,14 +37,25 @@ export function NotificationCenter({ onOpenOrder }: NotificationCenterProps) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<StoredNotification[]>([]);
   const [trackedIds, setTrackedIds] = useState<string[]>([]);
-  const [permission, setPermission] = useState<NotificationPermission>("default");
+  const [pwaState, setPwaState] = useState<{
+    isIOS: boolean;
+    isStandalone: boolean;
+    permission: NotificationPermission;
+    canEnablePush: boolean;
+  }>({
+    isIOS: false,
+    isStandalone: false,
+    permission: "default",
+    canEnablePush: false,
+  });
   const [newOrderIdInput, setNewOrderIdInput] = useState("");
   const [activeTab, setActiveTab] = useState<"notifications" | "devices">("notifications");
+  const [enablingPush, setEnablingPush] = useState(false);
 
   const loadData = () => {
     setNotifications(getStoredNotifications());
     setTrackedIds(getTrackedOrderIds());
-    setPermission(getDeviceNotificationPermission());
+    setPwaState(getPwaState());
   };
 
   useEffect(() => {
@@ -54,21 +66,31 @@ export function NotificationCenter({ onOpenOrder }: NotificationCenterProps) {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleRequestPermission = async () => {
-    const res = await requestDeviceNotificationPermission();
-    setPermission(res);
-    if (res === "granted") {
-      playNotificationChime();
-      toast.success("Device notifications enabled! You will receive live status updates.");
-      triggerDeviceNotification(
-        "Affordable Laundry Alerts Active 🔔",
-        "Your device will receive live notifications when your garment care status changes, even when not logged in.",
-        "SYSTEM",
-        "READY",
-      );
-      loadData();
-    } else if (res === "denied") {
-      toast.error("Notification permission was denied in your browser settings.");
+  // Called directly from user tap (required by iOS and Android)
+  const handleTurnOnPush = async () => {
+    setEnablingPush(true);
+    try {
+      const res = await enableNotifications();
+      setPwaState(getPwaState());
+
+      if (res.success) {
+        playNotificationChime();
+        toast.success(
+          "Web push alerts enabled! You'll receive updates even when the app is closed.",
+        );
+        loadData();
+      } else if (res.status === "blocked") {
+        toast.error(
+          "Notification permission was denied. Please allow notifications in site settings.",
+        );
+      } else {
+        toast.info(res.error || "Web push requires adding to Home Screen on iPhone.");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      toast.error("Failed to enable notifications: " + msg);
+    } finally {
+      setEnablingPush(false);
     }
   };
 
@@ -153,31 +175,51 @@ export function NotificationCenter({ onOpenOrder }: NotificationCenterProps) {
               </button>
             </div>
 
-            {/* Permission Banner */}
-            {permission !== "granted" ? (
+            {/* Permission Banner & State Display */}
+            {pwaState.permission !== "granted" ? (
               <div className="p-3.5 rounded-2xl bg-gradient-to-r from-primary/15 via-primary/10 to-indigo-500/10 border border-primary/25 space-y-2">
-                <div className="flex items-center gap-2 text-primary font-bold text-xs">
-                  <Smartphone className="w-4 h-4" />
-                  <span>Receive Alerts on This Device</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-primary font-bold text-xs">
+                    <Smartphone className="w-4 h-4" />
+                    <span>Background Web Push</span>
+                  </div>
+                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                    {pwaState.permission === "denied"
+                      ? "Blocked"
+                      : pwaState.isIOS && !pwaState.isStandalone
+                        ? "Not Installed"
+                        : "Ready"}
+                  </span>
                 </div>
+
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Get real-time status updates even when you are not logged in or when the app is in
-                  the background.
+                  {pwaState.isIOS && !pwaState.isStandalone
+                    ? "On iPhone, add this app to your Home Screen first to receive alerts when closed."
+                    : "Receive alerts for laundry collection, wash progress, and delivery even when the app is completely closed."}
                 </p>
-                <Button
-                  onClick={handleRequestPermission}
-                  size="sm"
-                  className="w-full rounded-xl text-xs font-bold h-9 shadow-xs"
-                >
-                  <BellRing className="w-3.5 h-3.5 mr-1.5" />
-                  Enable Device Notifications
-                </Button>
+
+                {pwaState.isIOS && !pwaState.isStandalone ? (
+                  <div className="p-2 rounded-xl bg-background/60 border border-border/50 text-[11px] text-foreground flex items-center gap-1.5">
+                    <Share className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>Tap Safari Share button, then 'Add to Home Screen'</span>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={handleTurnOnPush}
+                    disabled={enablingPush}
+                    size="sm"
+                    className="w-full rounded-xl text-xs font-bold h-9 shadow-xs"
+                  >
+                    <BellRing className="w-3.5 h-3.5 mr-1.5" />
+                    {enablingPush ? "Turning On..." : "Turn On Notifications"}
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs">
                 <div className="flex items-center gap-1.5 font-medium text-[11px]">
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Device Push Alerts Active</span>
+                  <span>Push Alerts Enabled (Active)</span>
                 </div>
                 <button
                   onClick={handleTestChime}

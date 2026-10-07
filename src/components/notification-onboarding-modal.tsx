@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { BellRing, Check, Smartphone, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  requestDeviceNotificationPermission,
-  triggerDeviceNotification,
-  playNotificationChime,
-} from "@/lib/order-notifications";
+import { triggerDeviceNotification, playNotificationChime } from "@/lib/order-notifications";
+import { enableNotifications } from "@/lib/web-push";
 import { toast } from "sonner";
 import brandIcon from "@/assets/affordable-laundry-icon.jpg";
 
@@ -37,8 +34,8 @@ export function NotificationOnboardingModal({
   const handleTurnOn = async () => {
     setSubmitting(true);
     try {
-      const res = await requestDeviceNotificationPermission();
-      if (res === "granted") {
+      const res = await enableNotifications();
+      if (res.success) {
         playNotificationChime();
         triggerDeviceNotification(
           "Alerts Turned On 🔔",
@@ -47,8 +44,10 @@ export function NotificationOnboardingModal({
           "READY",
         );
         toast.success("Phone updates turned on!");
+      } else if (res.status === "blocked") {
+        toast.info("Notifications were blocked in your browser settings.");
       } else {
-        toast.info("Settings saved.");
+        toast.info("Preferences saved.");
       }
     } catch (e) {
       console.error(e);

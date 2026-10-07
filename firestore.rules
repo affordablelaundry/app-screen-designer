@@ -68,5 +68,11 @@ service cloud.firestore {
       allow read: if isValidId(adminId) && isAdmin();
       allow write: if isValidId(adminId) && isAdmin();
     }
+
+    // Push subscriptions: clients cannot read or write at all.
+    // Only the server backend via Firebase Admin SDK accesses this collection.
+    match /pushSubscriptions/{subscriptionId} {
+      allow read, write: if false;
+    }
   }
 }

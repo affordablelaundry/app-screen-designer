@@ -11,6 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/context/auth-context";
+import { PwaPushBanner } from "@/components/pwa-push-banner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -152,18 +153,38 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          console.debug(
-            "Service Worker registered for native background notifications:",
-            reg.scope,
-          );
-        })
-        .catch((err) => {
-          console.debug("Service Worker registration notice:", err);
-        });
+    if (typeof window !== "undefined") {
+      // 1. Service Worker registration
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => {
+            console.debug(
+              "Service Worker registered for Web Push background notifications:",
+              reg.scope,
+            );
+          })
+          .catch((err) => {
+            console.debug("Service Worker registration notice:", err);
+          });
+      }
+
+      // 2. Prevent mobile browser sticky zoom after typing in inputs
+      const handleInputBlur = (e: FocusEvent) => {
+        if (
+          e.target instanceof HTMLInputElement ||
+          e.target instanceof HTMLTextAreaElement ||
+          e.target instanceof HTMLSelectElement
+        ) {
+          // Force layout reset
+          window.scrollTo({ left: 0, top: window.scrollY, behavior: "instant" });
+        }
+      };
+
+      document.addEventListener("blur", handleInputBlur, true);
+      return () => {
+        document.removeEventListener("blur", handleInputBlur, true);
+      };
     }
   }, []);
 
@@ -172,6 +193,7 @@ function RootComponent() {
       <AuthProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
+        <PwaPushBanner />
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </QueryClientProvider>

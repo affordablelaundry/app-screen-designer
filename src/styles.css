@@ -84,11 +84,15 @@
     font: inherit;
   }
   /* Crucial: Prevent iOS and Android mobile browsers from auto-zooming when focusing or typing in inputs */
-  @media screen and (max-width: 820px) {
+  @media screen and (max-width: 900px) {
     input,
+    input:focus,
     select,
-    textarea {
+    select:focus,
+    textarea,
+    textarea:focus {
       font-size: 16px !important;
+      touch-action: manipulation;
     }
   }
   ::selection {
