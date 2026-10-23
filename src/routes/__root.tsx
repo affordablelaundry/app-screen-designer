@@ -82,37 +82,43 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       {
         name: "viewport",
-        content:
-          "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover",
+        content: "width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover",
       },
-      { title: "Affordable Laundry Service · KNUST Kumasi" },
+      { title: "Affordable Laundry KNUST & Kumasi | Pickup & Delivery" },
       {
         name: "description",
         content:
-          "Clean clothes, delivered fresh to your door. Free collection and return across KNUST halls, hostels and Kumasi.",
+          "Affordable laundry pickup and delivery for KNUST students and Kumasi residents. Simple per-item prices, free campus pickup, fresh clothes returned fast.",
       },
+      { name: "robots", content: "index, follow" },
+      { name: "google-site-verification", content: "googlef7d1d9fcdf676f52" },
       { name: "author", content: "Affordable Laundry Service" },
       { name: "theme-color", content: "#0284c7" },
       { property: "og:type", content: "website" },
-      { property: "og:title", content: "Affordable Laundry Service · KNUST Kumasi" },
+      { property: "og:site_name", content: "Affordable Laundry" },
+      { property: "og:locale", content: "en_GH" },
+      { property: "og:url", content: "https://affordable-laundry.vercel.app/" },
+      { property: "og:title", content: "Affordable Laundry KNUST & Kumasi | Pickup & Delivery" },
       {
         property: "og:description",
         content:
-          "Clean clothes, delivered fresh to your door. Simple item pricing, free campus pickup and fast delivery.",
+          "Affordable laundry pickup and delivery for KNUST students and Kumasi residents. Simple per-item prices, free campus pickup, fresh clothes returned fast.",
       },
-      { property: "og:image", content: "/og-image.jpg" },
+      { property: "og:image", content: "https://affordable-laundry.vercel.app/og-image.jpg" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Affordable Laundry Service KNUST Kumasi" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Affordable Laundry Service · KNUST Kumasi" },
+      { name: "twitter:title", content: "Affordable Laundry KNUST & Kumasi | Pickup & Delivery" },
       {
         name: "twitter:description",
         content:
-          "Clean clothes, delivered fresh to your door. Simple item pricing with free campus pickup.",
+          "Affordable laundry pickup and delivery for KNUST students and Kumasi residents. Simple per-item prices, free campus pickup, fresh clothes returned fast.",
       },
-      { name: "twitter:image", content: "/og-image.jpg" },
+      { name: "twitter:image", content: "https://affordable-laundry.vercel.app/og-image.jpg" },
     ],
     links: [
+      { rel: "canonical", href: "https://affordable-laundry.vercel.app/" },
       {
         rel: "stylesheet",
         href: appCss,
@@ -134,11 +140,126 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+const schemaData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "LaundryService",
+      "@id": "https://affordable-laundry.vercel.app/#service",
+      name: "Affordable Laundry",
+      alternateName: "Affordable Laundry KNUST",
+      url: "https://affordable-laundry.vercel.app/",
+      logo: "https://affordable-laundry.vercel.app/favicon.jpg",
+      image: "https://affordable-laundry.vercel.app/og-image.jpg",
+      description:
+        "Affordable laundry pickup and delivery for KNUST students and Kumasi residents. Simple per-item prices, free campus pickup, fresh clothes returned fast.",
+      telephone: "+233532331150",
+      priceRange: "GH₵4 - GH₵50",
+      paymentAccepted: "Cash, Mobile Money (MTN MoMo, Telecel Cash)",
+      currenciesAccepted: "GHS",
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: "Ayeduase Road near KNUST Campus",
+        addressLocality: "Kumasi",
+        addressRegion: "Ashanti Region",
+        addressCountry: "GH",
+      },
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: 6.6752325,
+        longitude: -1.5620578,
+      },
+      hasMap: "https://maps.app.goo.gl/V6eX9v3zBjmZy7EV7",
+      areaServed: [
+        { "@type": "AdministrativeArea", name: "KNUST Campus" },
+        { "@type": "AdministrativeArea", name: "Ayeduase" },
+        { "@type": "AdministrativeArea", name: "Kotei" },
+        { "@type": "AdministrativeArea", name: "Bomso" },
+        { "@type": "AdministrativeArea", name: "Boadi" },
+        { "@type": "AdministrativeArea", name: "Oforikrom" },
+        { "@type": "City", name: "Kumasi" },
+      ],
+      openingHoursSpecification: [
+        {
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+          opens: "07:00",
+          closes: "20:00",
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: ["Sunday"],
+          opens: "10:00",
+          closes: "18:00",
+        },
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://affordable-laundry.vercel.app/#faq",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "How much does laundry cost at KNUST?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "We charge simple, transparent per-item prices starting from only GH₵4 per cloth (GH₵4 for T-shirts, GH₵5 for dress shirts, GH₵6 for trousers/jeans). There are no heavy weighing scales or surprise fees.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "How long does laundry pickup and delivery take in Kumasi?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Garments are washed clean, dried, steam ironed smooth, and returned in protective packaging within 24 to 48 hours (1 to 2 days) to your doorstep.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Do you pick up from student hostels and halls around KNUST?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes! Our dispatch riders offer free doorstep collection and return at all traditional KNUST halls (Unity/Conti, University/Katanga, Republic, Queen Elizabeth II, Independence, Africa) and student hostels across Ayeduase, Kotei, Bomso, Boadi, and Gaza.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Which areas in Kumasi do you cover for laundry pickup?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "We cover KNUST campus, Ayeduase, Kotei, Bomso, Boadi, Oforikrom, Gyinyase, Kentinkrono, and surrounding Kumasi neighborhoods.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "How do I pay for my laundry service?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "You only pay after your clothes are cleaned, ironed, and returned to your hands. We accept Mobile Money (MTN MoMo, Telecel Cash) and cash directly on delivery.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "What items and garments do you wash and fold?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "We wash all everyday student and household clothing including shirts, trousers, jeans, dresses, hoodies, bedsheets, duvet covers, lab coats, and native wear with gentle fabric care.",
+          },
+        },
+      ],
+    },
+  ],
+};
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en-GH">
       <head>
         <HeadContent />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        />
       </head>
       <body>
         {children}
