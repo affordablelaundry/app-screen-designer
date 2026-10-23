@@ -15,10 +15,6 @@ import {
   Truck,
   WashingMachine,
   X,
-  LogIn,
-  Shield,
-  User as UserIcon,
-  LayoutDashboard,
   Navigation,
   Compass,
   MessageCircle,
@@ -27,12 +23,7 @@ import {
 import { toast } from "sonner";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useAuth } from "@/context/auth-context";
-import { AuthModal } from "@/components/auth-modal";
-import { CustomerPortal } from "@/components/customer-portal";
-import { AdminDashboard } from "@/components/admin-dashboard";
 import { MapDirection } from "@/components/map-direction";
-import { NotificationOnboardingModal } from "@/components/notification-onboarding-modal";
 import { PlacesAutocomplete } from "@/components/places-autocomplete";
 import {
   Accordion,
@@ -40,20 +31,10 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import {
-  setupDeviceOrderNotifications,
-  setupAdminOrderNotifications,
-  setupCustomerOrderNotifications,
-  addTrackedOrderId,
-  triggerDeviceNotification,
-  broadcastOrderEvent,
-  playNotificationChime,
-  getStatusFriendlyText,
-  requestDeviceNotificationPermission,
-  getDeviceNotificationPermission,
-  notifyOrderApi,
-  shouldShowNotificationPrompt,
-} from "@/lib/order-notifications";
+
+const WHATSAPP_PHONE = "233532331150";
+const WHATSAPP_DISPLAY = "053 233 1150";
+const DEFAULT_WHATSAPP_LINK = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent("Hello Affordable Laundry, I would like to request a garment pickup.")}`;
 
 import heroAtelierImage from "@/assets/images/ghanaian_hero_1790975886532.jpg";
 import courierImage from "@/assets/images/courier_dispatch_1790871292507.jpg";
@@ -151,10 +132,6 @@ function scrollToSection(id: string) {
 }
 
 export function LaundryApp() {
-  const { user, profile, isAdmin, logout } = useAuth();
-  const [currentView, setCurrentView] = useState<"landing" | "dashboard">("landing");
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [showNotificationOnboarding, setShowNotificationOnboarding] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingComplete, setBookingComplete] = useState(false);
@@ -163,20 +140,6 @@ export function LaundryApp() {
   const [typedLocation, setTypedLocation] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("top");
-  const [pendingOpenBookingAfterAuth, setPendingOpenBookingAfterAuth] = useState(false);
-
-  // Check whether to show the notification onboarding prompt on new device sign-in / sign-up
-  useEffect(() => {
-    if (user?.uid) {
-      if (shouldShowNotificationPrompt(user.uid)) {
-        setShowNotificationOnboarding(true);
-      } else {
-        setShowNotificationOnboarding(false);
-      }
-    } else {
-      setShowNotificationOnboarding(false);
-    }
-  }, [user]);
 
   // Track window scroll for transparent title bar on hero section & active nav item
   useEffect(() => {
@@ -204,75 +167,6 @@ export function LaundryApp() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  // Real-time live notification watchers:
-  // 1. Admin gets pop up notification whenever any customer books an order
-  // 2. Customer gets pop up notification whenever admin updates their order process
-  useEffect(() => {
-    // When inside the dashboard, AdminDashboard or CustomerPortal handles view-specific toast actions
-    if (currentView === "dashboard") return;
-
-    if (isAdmin) {
-      const unsubAdmin = setupAdminOrderNotifications((booking) => {
-        toast.info(
-          `🔔 New Customer Booking! Order #${booking.orderId} from ${booking.customerName} - ${booking.itemCount} items at ${booking.location}.`,
-          {
-            duration: 10000,
-            action: {
-              label: "Open Dashboard",
-              onClick: () => handleNavigateToDashboard(),
-            },
-          },
-        );
-      });
-      return () => unsubAdmin();
-    } else {
-      const unsubCustomer = setupCustomerOrderNotifications(
-        { userId: user?.uid, email: user?.email || profile?.email || "" },
-        (orderId, newStatus, title, body) => {
-          toast.info(`👕 ${title}`, {
-            description: body,
-            duration: 9000,
-            action: {
-              label: "View Status",
-              onClick: () => handleNavigateToDashboard(),
-            },
-          });
-        },
-      );
-      return () => unsubCustomer();
-    }
-  }, [isAdmin, user?.uid, user?.email, profile?.email, currentView]);
-
-  // Check if notification permission prompt is needed on new device
-  const handleNavigateToDashboard = () => {
-    if (user) {
-      const alreadyOnboarded = localStorage.getItem(`al_notif_onboarded_${user.uid}`);
-      if (!alreadyOnboarded) {
-        setShowNotificationOnboarding(true);
-      }
-    }
-    setCurrentView("dashboard");
-  };
-
-  // Sync hash #dashboard on client
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const handleHash = () => {
-        if (window.location.hash === "#dashboard") {
-          if (user) {
-            handleNavigateToDashboard();
-          } else {
-            setAuthModalOpen(true);
-          }
-        }
-      };
-
-      handleHash();
-      window.addEventListener("hashchange", handleHash);
-      return () => window.removeEventListener("hashchange", handleHash);
-    }
-  }, [user]);
 
   const navItems = useMemo(() => {
     return [
@@ -317,14 +211,6 @@ export function LaundryApp() {
   };
 
   const handleBookingTrigger = () => {
-    if (!user) {
-      toast.info("Please sign up or sign in to confirm your pickup and track your clothes!", {
-        duration: 4500,
-      });
-      setPendingOpenBookingAfterAuth(true);
-      setAuthModalOpen(true);
-      return;
-    }
     openBooking();
   };
 
@@ -335,21 +221,43 @@ export function LaundryApp() {
       return;
     }
 
-    if (!user) {
-      toast.info("Please create an account or sign in to complete your pickup!", {
-        duration: 4500,
-      });
-      setPendingOpenBookingAfterAuth(true);
-      setAuthModalOpen(true);
+    const form = new FormData(event.currentTarget);
+    const newBookingId = `AL${Date.now().toString().slice(-5)}`;
+    const customer = String(form.get("name") || "").trim() || "Valued Customer";
+    const phone = String(form.get("phone") || "").trim();
+    const location = (typedLocation || String(form.get("location") || "")).trim() || "KNUST Campus";
+    const date = String(form.get("date") || "Tomorrow");
+
+    if (!customer) {
+      toast.error("Please enter your name.");
+      return;
+    }
+    if (!phone) {
+      toast.error("Please enter your phone number.");
       return;
     }
 
-    const form = new FormData(event.currentTarget);
-    const newBookingId = `AL${Date.now().toString().slice(-5)}`;
-    const customer = String(form.get("name") || profile?.displayName || "Valued Customer");
-    const phone = String(form.get("phone") || profile?.phone || "");
-    const location = (typedLocation || String(form.get("location") || "")).trim() || "KNUST Campus";
-    const date = String(form.get("date") || "Tomorrow");
+    // Selected garments summary for WhatsApp
+    const selectedLines = laundryItems
+      .filter((item) => (quantities[item.id] ?? 0) > 0)
+      .map(
+        (item) =>
+          `• ${quantities[item.id]}x ${item.name} (GHC ${item.price * (quantities[item.id] ?? 0)})`,
+      );
+
+    const whatsappMessage =
+      `🧺 *New Laundry Pickup Request - Affordable Laundry*\n\n` +
+      `*Order ID:* #${newBookingId}\n` +
+      `*Customer:* ${customer}\n` +
+      `*Phone:* ${phone}\n` +
+      `*Pickup Location:* ${location}\n` +
+      `*Pickup Date:* ${date}\n\n` +
+      `*Garments Selected:*\n${selectedLines.join("\n")}\n\n` +
+      `*Total Pieces:* ${itemCount} ${itemCount === 1 ? "piece" : "pieces"}\n` +
+      `*Estimated Total:* GHC ${total}\n\n` +
+      `Hello Affordable Laundry, please confirm my pickup schedule. Thank you!`;
+
+    const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(whatsappMessage)}`;
 
     const booking: Booking = {
       id: newBookingId,
@@ -362,144 +270,44 @@ export function LaundryApp() {
       status: "COLLECTION_SCHEDULED",
     };
 
-    const cleanEmail = (user?.email || profile?.email || "").trim().toLowerCase();
-    const orderRecord = {
-      id: newBookingId,
-      docId: newBookingId,
-      userId: user?.uid || "guest",
-      customerName: customer,
-      customerEmail: cleanEmail,
-      customerPhone: phone,
-      location,
-      pickupDate: date,
-      items: quantities,
-      itemCount,
-      total,
-      status: "COLLECTION_SCHEDULED" as const,
-      stageNotes: "Pickup request confirmed. Rider assigned.",
-      riderName: "Affordable Laundry Dispatch Rider",
-      riderPhone: "053 233 1150",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    // Save to Firestore
     try {
-      const orderRef = doc(db, "orders", newBookingId);
-      await setDoc(orderRef, orderRecord);
-    } catch (e) {
-      console.error("Error saving booking to Firestore:", e);
-    }
-
-    // Broadcast new booking immediately so admin dashboard gets instant pop-up notification
-    broadcastOrderEvent({
-      type: "NEW_ORDER",
-      orderId: newBookingId,
-      customerName: customer,
-      customerEmail: cleanEmail,
-      userId: user?.uid || "",
-      itemCount,
-      total,
-      location,
-      status: "COLLECTION_SCHEDULED",
-    });
-
-    // Send push notification to admins so they receive background alert even when phone is closed
-    notifyOrderApi("NEW_ORDER", [newBookingId]).catch((err) => {
-      console.debug("notifyOrderApi error:", err);
-    });
-
-    // Persist into unified order cache (ensures manual & Google accounts share exact same data)
-    try {
-      const rawCache = window.localStorage.getItem("al_orders_cache");
-      const cacheList = rawCache ? JSON.parse(rawCache) : [];
-      // Remove any duplicate id if it existed
-      const filtered = cacheList.filter((item: { id: string }) => item.id !== newBookingId);
-      filtered.unshift(orderRecord);
-      window.localStorage.setItem("al_orders_cache", JSON.stringify(filtered));
+      window.localStorage.setItem(savedBookingKey, JSON.stringify(booking));
     } catch {
       // ignore
     }
 
-    // Register this order on this device for live background push notifications
-    addTrackedOrderId(newBookingId);
-
-    // Prompt native notification permission so alerts pop up whether inside or outside the app
-    if (
-      typeof window !== "undefined" &&
-      "Notification" in window &&
-      Notification.permission === "default"
-    ) {
-      try {
-        await requestDeviceNotificationPermission();
-      } catch {
-        // ignore
-      }
-    }
-
-    triggerDeviceNotification(
-      `Affordable Laundry: Pickup Booked!`,
-      `Order #${newBookingId} is set for ${date}. We'll notify your phone when the rider is coming.`,
-      newBookingId,
-      "COLLECTION_SCHEDULED",
-    );
-
-    window.localStorage.setItem(savedBookingKey, JSON.stringify(booking));
     setLatestBooking(booking);
     setBookingComplete(true);
-    toast.success("Your pickup has been booked!");
-  };
 
-  // The admin gmail MUST have only ONE dashboard as admin, not 2 separate dashboards
-  if (currentView === "dashboard") {
-    if (isAdmin) {
-      return (
-        <>
-          <AdminDashboard
-            onBackToLanding={() => {
-              setCurrentView("landing");
-              if (typeof window !== "undefined" && window.location.hash === "#dashboard") {
-                window.history.pushState(null, "", window.location.pathname);
-              }
-            }}
-          />
-          <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
-          {showNotificationOnboarding && user && (
-            <NotificationOnboardingModal
-              userId={user.uid}
-              isOpen={true}
-              onComplete={() => setShowNotificationOnboarding(false)}
-            />
-          )}
-        </>
-      );
+    // Save record to Firestore for backup
+    try {
+      const orderRef = doc(db, "orders", newBookingId);
+      await setDoc(orderRef, {
+        id: newBookingId,
+        docId: newBookingId,
+        customerName: customer,
+        customerPhone: phone,
+        location,
+        pickupDate: date,
+        items: quantities,
+        itemCount,
+        total,
+        channel: "WHATSAPP",
+        status: "COLLECTION_SCHEDULED",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    } catch {
+      // ignore
     }
 
-    return (
-      <>
-        <CustomerPortal
-          onBackToLanding={() => {
-            setCurrentView("landing");
-            if (typeof window !== "undefined" && window.location.hash === "#dashboard") {
-              window.history.pushState(null, "", window.location.pathname);
-            }
-          }}
-        />
-        <AuthModal
-          isOpen={authModalOpen}
-          onClose={() => setAuthModalOpen(false)}
-          onSuccess={() => handleNavigateToDashboard()}
-        />
-        {showNotificationOnboarding && user && (
-          <NotificationOnboardingModal
-            userId={user.uid}
-            isOpen={true}
-            onComplete={() => setShowNotificationOnboarding(false)}
-          />
-        )}
-      </>
-    );
-  }
+    toast.success("Opening WhatsApp chat directly for 053 233 1150...");
+    try {
+      window.location.assign(whatsappUrl);
+    } catch {
+      window.open(whatsappUrl, "_blank");
+    }
+  };
 
   return (
     <div className="site-shell min-h-screen bg-background text-foreground antialiased font-sans overflow-x-hidden">
@@ -581,86 +389,19 @@ export function LaundryApp() {
             })}
           </nav>
 
-          {/* Right Action Cluster - Clean order: [My Dashboard] -> [Book Collection] -> [Sign Out LAST] */}
+          {/* Right Action Cluster - Book Collection button & Mobile Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {user ? (
-              <div className="flex items-center gap-2 sm:gap-2.5">
-                {/* 1. Dashboard Button */}
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleNavigateToDashboard}
-                  className={`rounded-2xl text-xs font-extrabold shadow-sm gap-1.5 h-9 sm:h-10 px-3.5 sm:px-4 ${
-                    isAdmin
-                      ? "bg-sky-600 hover:bg-sky-700 text-white"
-                      : "bg-primary text-primary-foreground"
-                  }`}
-                >
-                  {isAdmin ? (
-                    <Shield className="w-3.5 h-3.5" />
-                  ) : (
-                    <LayoutDashboard className="w-3.5 h-3.5" />
-                  )}
-                  <span>{isAdmin ? "Admin Command" : "My Dashboard"}</span>
-                </Button>
-
-                {/* 2. Book Collection Button */}
-                <Button
-                  onClick={handleBookingTrigger}
-                  className={`rounded-2xl text-xs font-extrabold shadow-md h-9 sm:h-10 px-3.5 sm:px-4 gap-1.5 hidden md:inline-flex transition-all duration-300 hover:scale-105 active:scale-95 ${
-                    !isScrolled
-                      ? "bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/30 shadow-lg"
-                      : "bg-foreground text-background hover:bg-foreground/90"
-                  }`}
-                >
-                  <span>Book Collection</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-
-                {/* 3. Sign Out Button - Placed LAST as requested */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={logout}
-                  className={`rounded-2xl text-xs font-semibold h-9 px-2.5 hidden sm:inline-flex transition-colors duration-300 ${
-                    !isScrolled
-                      ? "text-white/80 hover:text-white hover:bg-white/10"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  title="Sign Out"
-                >
-                  Sign Out
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setAuthModalOpen(true)}
-                  className={`rounded-2xl text-xs font-semibold h-9 px-3 transition-all duration-300 ${
-                    !isScrolled
-                      ? "text-white border border-white/25 bg-white/10 hover:bg-white/20 hover:text-white backdrop-blur-md"
-                      : "hover:bg-muted text-foreground"
-                  }`}
-                >
-                  <LogIn className="w-3.5 h-3.5 mr-1" />
-                  Sign In
-                </Button>
-
-                <Button
-                  onClick={handleBookingTrigger}
-                  className={`rounded-2xl text-xs font-extrabold shadow-md h-9 sm:h-10 px-4 gap-1.5 hidden md:inline-flex transition-all duration-300 hover:scale-105 active:scale-95 ${
-                    !isScrolled
-                      ? "bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/30 shadow-lg"
-                      : "bg-foreground text-background hover:bg-foreground/90"
-                  }`}
-                >
-                  <span>Book Collection</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            )}
+            <Button
+              onClick={openBooking}
+              className={`rounded-2xl text-xs font-extrabold shadow-md h-9 sm:h-10 px-3.5 sm:px-4 gap-1.5 inline-flex transition-all duration-300 hover:scale-105 active:scale-95 ${
+                !isScrolled
+                  ? "bg-sky-500 hover:bg-sky-400 text-white shadow-sky-500/30 shadow-lg"
+                  : "bg-foreground text-background hover:bg-foreground/90"
+              }`}
+            >
+              <span>Book Collection</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
 
             {/* Mobile Menu Hamburger */}
             <Button
@@ -683,11 +424,9 @@ export function LaundryApp() {
             {/* Quick status bar inside mobile menu */}
             <div className="flex items-center justify-between pb-3 border-b border-white/15 px-1">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-sky-400" />
-                <span className="text-xs font-black uppercase tracking-wider text-sky-400">
-                  {user
-                    ? `Active · ${profile?.displayName || user.displayName || "Valued Customer"}`
-                    : "Fast KNUST Campus Pickup"}
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                  Fast KNUST Campus Pickup
                 </span>
               </div>
               <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-white/15 border border-white/20 text-white tracking-wide">
@@ -742,7 +481,7 @@ export function LaundryApp() {
               <Button
                 onClick={() => {
                   setMenuOpen(false);
-                  handleBookingTrigger();
+                  openBooking();
                 }}
                 className="w-full rounded-2xl text-xs font-black h-12 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/30 gap-2 transition-all hover:scale-[1.02] active:scale-98 border border-white/20"
               >
@@ -751,47 +490,16 @@ export function LaundryApp() {
                 <ArrowRight className="w-3.5 h-3.5" />
               </Button>
 
-              {user ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      handleNavigateToDashboard();
-                    }}
-                    className="w-full rounded-2xl text-xs font-extrabold h-11 border-white/25 bg-white/15 hover:bg-white/25 text-white gap-2 shadow-xs"
-                  >
-                    {isAdmin ? (
-                      <Shield className="w-4 h-4 text-sky-400" />
-                    ) : (
-                      <LayoutDashboard className="w-4 h-4 text-sky-400" />
-                    )}
-                    <span>{isAdmin ? "Admin HQ" : "My Dashboard"}</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      logout();
-                    }}
-                    className="w-full rounded-2xl text-xs font-bold h-11 text-red-300 hover:text-red-200 hover:bg-red-500/20 border border-red-500/20"
-                  >
-                    Sign Out
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setAuthModalOpen(true);
-                  }}
-                  className="w-full rounded-2xl text-xs font-extrabold h-11 border-white/25 bg-white/15 hover:bg-white/25 text-white gap-2 shadow-xs"
-                >
-                  <LogIn className="w-4 h-4 text-sky-400" />
-                  <span>Sign In / Create Account</span>
-                </Button>
-              )}
+              <a
+                href={DEFAULT_WHATSAPP_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMenuOpen(false)}
+                className="w-full rounded-2xl text-xs font-black h-11 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md flex items-center justify-center gap-2 transition-all"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>WhatsApp Direct ({WHATSAPP_DISPLAY})</span>
+              </a>
 
               {/* Direct Call Rider Hotlink */}
               <a
@@ -1250,31 +958,17 @@ export function LaundryApp() {
             )}
           </button>
 
-          {/* 5. Portal / Admin / Sign In Tab */}
-          <button
-            type="button"
-            onClick={() => {
-              if (user) {
-                handleNavigateToDashboard();
-              } else {
-                setAuthModalOpen(true);
-              }
-            }}
-            className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-full transition-all duration-200 active:scale-95 ${
-              user ? "text-sky-400 hover:text-sky-300 font-bold" : "text-white/80 hover:text-white"
-            }`}
+          {/* 5. Direct WhatsApp Tab */}
+          <a
+            href={DEFAULT_WHATSAPP_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat on WhatsApp"
+            className="relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full text-emerald-400 hover:text-emerald-300 transition-all duration-200 active:scale-95"
           >
-            {isAdmin ? (
-              <Shield className="w-4 h-4 text-sky-400" />
-            ) : user ? (
-              <LayoutDashboard className="w-4 h-4 text-sky-400" />
-            ) : (
-              <LogIn className="w-4 h-4" />
-            )}
-            <span className="text-[10px] font-bold tracking-tight mt-0.5">
-              {user ? (isAdmin ? "Admin" : "Portal") : "Sign In"}
-            </span>
-          </button>
+            <MessageCircle className="w-4 h-4" />
+            <span className="text-[10px] font-bold tracking-tight mt-0.5">WhatsApp</span>
+          </a>
         </div>
       </nav>
 
@@ -1314,44 +1008,56 @@ export function LaundryApp() {
 
             {bookingComplete && latestBooking ? (
               <div className="text-center py-4 space-y-4">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                  <Check className="w-8 h-8" />
+                <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-inner">
+                  <MessageCircle className="w-8 h-8" />
                 </div>
                 <div>
-                  <h4 className="text-lg font-bold text-foreground">You’re All Set!</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Pickup <strong>#{latestBooking.id}</strong> has been booked for{" "}
+                  <h4 className="text-xl font-black text-foreground tracking-tight">
+                    Booking Sent to WhatsApp!
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                    Pickup <strong>#{latestBooking.id}</strong> has been prepared for{" "}
+                    <strong>{latestBooking.customer}</strong> on{" "}
                     <strong>{latestBooking.date}</strong> at{" "}
-                    <strong>{latestBooking.location}</strong>. Our rider will call your phone before
-                    arriving.
+                    <strong>{latestBooking.location}</strong>.
                   </p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-muted/40 border border-border text-xs flex justify-between font-bold">
-                  <span>Total to Pay:</span>
-                  <span className="text-primary text-base">GHC {latestBooking.total}</span>
+                  <span>Estimated Total:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 text-base">
+                    GHC {latestBooking.total}
+                  </span>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                  <Button
-                    onClick={() => setBookingOpen(false)}
-                    className="w-full rounded-2xl text-xs font-bold h-11"
+                <div className="flex flex-col gap-2.5 pt-2">
+                  <a
+                    href={`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
+                      `🧺 *New Laundry Pickup Request - Affordable Laundry*\n\n` +
+                        `*Order ID:* #${latestBooking.id}\n` +
+                        `*Customer:* ${latestBooking.customer}\n` +
+                        `*Phone:* ${latestBooking.phone}\n` +
+                        `*Pickup Location:* ${latestBooking.location}\n` +
+                        `*Pickup Date:* ${latestBooking.date}\n\n` +
+                        `*Estimated Total:* GHC ${latestBooking.total}\n\n` +
+                        `Hello Affordable Laundry, please confirm my pickup schedule. Thank you!`,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full h-12 rounded-2xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-98"
                   >
-                    Done
-                  </Button>
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Open WhatsApp Chat ({WHATSAPP_DISPLAY})</span>
+                  </a>
                   <Button
                     variant="outline"
                     onClick={() => {
                       setBookingOpen(false);
-                      if (user) {
-                        handleNavigateToDashboard();
-                      } else {
-                        setAuthModalOpen(true);
-                      }
+                      setBookingComplete(false);
                     }}
                     className="w-full rounded-2xl text-xs font-bold h-11"
                   >
-                    See Order in Dashboard
+                    Done
                   </Button>
                 </div>
               </div>
@@ -1408,7 +1114,7 @@ export function LaundryApp() {
                     <input
                       name="name"
                       required
-                      defaultValue={profile?.displayName || user?.displayName || ""}
+                      defaultValue={latestBooking?.customer || ""}
                       placeholder="e.g. Kwame Mensah"
                       className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-base sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                     />
@@ -1419,7 +1125,7 @@ export function LaundryApp() {
                       name="phone"
                       required
                       type="tel"
-                      defaultValue={profile?.phone || ""}
+                      defaultValue={latestBooking?.phone || ""}
                       placeholder="053 233 1150"
                       className="w-full h-11 px-3 rounded-2xl border border-input bg-background text-foreground text-base sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                     />
@@ -1460,40 +1166,15 @@ export function LaundryApp() {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 rounded-2xl text-xs font-extrabold shadow-lg bg-sky-500 hover:bg-sky-400 text-white transition-all hover:scale-[1.02] active:scale-98"
+                  className="w-full h-12 rounded-2xl text-xs font-black shadow-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:scale-[1.02] active:scale-98 flex items-center justify-center gap-2"
                 >
-                  {!user ? "Sign In & Confirm Pickup" : `Confirm Pickup · GHC ${total}`}
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Send Pickup Request via WhatsApp · GHC {total}</span>
                 </Button>
               </form>
             )}
           </div>
         </div>
-      )}
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => {
-          setAuthModalOpen(false);
-          setPendingOpenBookingAfterAuth(false);
-        }}
-        onSuccess={() => {
-          if (pendingOpenBookingAfterAuth) {
-            setPendingOpenBookingAfterAuth(false);
-            openBooking();
-          } else {
-            handleNavigateToDashboard();
-          }
-        }}
-      />
-
-      {/* One-time notification onboarding modal on new device sign-in / sign-up */}
-      {showNotificationOnboarding && user && (
-        <NotificationOnboardingModal
-          userId={user.uid}
-          isOpen={true}
-          onComplete={() => setShowNotificationOnboarding(false)}
-        />
       )}
     </div>
   );

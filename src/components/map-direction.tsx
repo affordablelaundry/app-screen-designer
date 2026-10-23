@@ -14,12 +14,12 @@ import {
 import { Button } from "@/components/ui/button";
 
 const ATELIER_LOCATION = {
-  name: "Affordable Laundry Shop",
-  address: "Ayeduase - KNUST Main Gate Road, Kumasi, Ghana",
+  name: "Affordable Laundry (Main Branch)",
+  address: "Ayeduase - KNUST, Kumasi, Ghana",
   city: "Kumasi, Ashanti Region",
-  plusCode: "M8GR+5V Kumasi",
-  lat: 6.6745,
-  lng: -1.567,
+  mapsUrl: "https://maps.app.goo.gl/V6eX9v3zBjmZy7EV7",
+  lat: 6.6752325,
+  lng: -1.5620578,
   phone: "053 233 1150",
   whatsapp: "233532331150",
   hours: "Mon – Sat: 7:00 AM – 8:00 PM · Sun: 10:00 AM – 6:00 PM",
@@ -59,8 +59,9 @@ const CAMPUS_ZONES = [
 export function MapDirection() {
   const [activeZone, setActiveZone] = useState<number>(0);
 
-  const googleMapsDirectionsUrl = `https://www.google.com/maps/dir/?api=1&destination=KNUST+Ayeduase+Kumasi+Ghana`;
-  const googleMapsEmbedUrl = `https://maps.google.com/maps?q=KNUST+Ayeduase+Kumasi+Ghana&t=&z=14&ie=UTF8&iwloc=&output=embed`;
+  const googleMapsDirectionsUrl = "https://maps.app.goo.gl/V6eX9v3zBjmZy7EV7";
+  const googleMapsEmbedUrl =
+    "https://maps.google.com/maps?q=6.6752325,-1.5620578+(AFFORDABLE+LAUNDRY)&t=&z=16&ie=UTF8&iwloc=B&output=embed";
 
   return (
     <section

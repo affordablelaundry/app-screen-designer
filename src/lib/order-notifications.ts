@@ -371,8 +371,8 @@ export async function triggerDeviceNotification(
       body,
       icon: "/icon-192.png",
       badge: "/icon-192.png",
-      // Consistent order-level tag ensures Android OS replaces previous notification rather than doubling
-      tag: `al-order-${orderId}`,
+      // Consistent tag matching server push tag format to prevent duplicate stacking
+      tag: `al-order-${orderId}-${status}`,
       data: {
         url: "/#dashboard",
         orderId,

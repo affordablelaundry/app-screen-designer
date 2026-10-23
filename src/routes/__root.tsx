@@ -11,7 +11,6 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/context/auth-context";
-import { PwaPushBanner } from "@/components/pwa-push-banner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -193,7 +192,6 @@ function RootComponent() {
       <AuthProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
-        <PwaPushBanner />
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </QueryClientProvider>
