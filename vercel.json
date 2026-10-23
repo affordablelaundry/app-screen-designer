@@ -19,19 +19,5 @@
       "path": "/api/cron-example",
       "schedule": "0 8 * * *"
     }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/sw.js",
-      "destination": "/sw.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/"
-    }
   ]
 }
