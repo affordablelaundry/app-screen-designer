@@ -116,11 +116,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { name: "twitter:image", content: "/og-image.jpg" },
       { name: "twitter:image:alt", content: "Clean folded laundry delivered to a KNUST hostel" },
-    ],
-    scripts: [
       {
-        type: "application/ld+json",
-        children: JSON.stringify({
+        "script:ld+json": {
           "@context": "https://schema.org",
           "@type": "DryCleaningOrLaundry",
           name: "Affordable Laundry KNUST & Kumasi",
@@ -159,7 +156,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             "Oforikrom",
             "Kumasi",
           ],
-        }),
+        },
       },
     ],
     links: [
