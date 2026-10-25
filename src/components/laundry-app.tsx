@@ -96,28 +96,32 @@ const services = [
 // Straightforward answers to everyday laundry questions around KNUST & Kumasi
 const faqs = [
   {
-    q: "How much does laundry cost at KNUST?",
-    a: "We charge simple, transparent per-item prices starting from only GHC 4 per cloth (GHC 4 for T-shirts, GHC 5 for dress shirts, GHC 6 for trousers and jeans). There are no heavy weighing scales or unexpected fees, making it the most affordable laundry service for KNUST students.",
+    q: "How do I prepare my clothes before the rider arrives?",
+    a: "Just put your dirty clothes in any bag or rubber bag (poly bag). You don’t need to count them first; our rider will count them together with you at your door, or we count them at our shop and text you a confirmation right away.",
   },
   {
-    q: "How long does laundry pickup and delivery take in Kumasi?",
-    a: "Normally 24 to 48 hours (1 to 2 days). Your clothes are washed clean, dried thoroughly with backup solar power, steam ironed smooth, and returned in protective packaging right to your doorstep.",
+    q: "What items and clothes do you wash?",
+    a: "We wash all everyday clothes: T-shirts, shirts, trousers, jeans, dresses, hoodies, shorts, boxers, and school uniforms or lab coats. We also wash bedsheets, duvet covers, pillowcases, and towels. If you have delicate native wear or funeral fabrics, tell the rider and we take special gentle care.",
   },
   {
-    q: "Do you pick up from student hostels and halls around KNUST?",
-    a: "Yes! Our dispatch riders provide free doorstep pickup and delivery to all traditional KNUST campus halls (Unity/Conti, University/Katanga, Republic, Queen Elizabeth II, Independence, Africa Hall) and student hostels across Ayeduase, Kotei, Bomso, Boadi, and Gaza.",
+    q: "How and when do I pay for my laundry?",
+    a: "You only pay AFTER your clothes are washed, dried, ironed, and delivered back to you. You can pay via Mobile Money (MTN MoMo, Telecel Cash) or give cash directly to the rider.",
   },
   {
-    q: "Which areas in Kumasi do you cover for laundry pickup?",
-    a: "We cover the entire KNUST campus, Ayeduase, Kotei, Bomso, Boadi, Oforikrom, Gyinyase, Kentinkrono, and surrounding Kumasi neighborhoods. Just book a pickup and our rider will come to your gate.",
+    q: "Do you charge by weight (kilo) or per cloth?",
+    a: "We charge simple prices for each single cloth (from GHC 4 per piece). There are no heavy weighing scales, wet weight tricks, or guessing. You know exactly what you are paying before we start.",
   },
   {
-    q: "How do I pay for my laundry service?",
-    a: "You only pay AFTER your clothes are washed, dried, ironed, and delivered safely to you. You can pay conveniently using Mobile Money (MTN MoMo, Telecel Cash) or cash on delivery.",
+    q: "Will the rider come directly to my hostel or hall gate?",
+    a: "Yes! Whether you are staying in Unity Hall (Conti), Katanga, Republic, Queen's, Independence, Africa Hall, or in hostels around Ayeduase, Kotei, Bomso, or Gyinyase, our dispatch rider calls your phone directly when outside your gate.",
   },
   {
-    q: "What items and clothes do you wash and fold?",
-    a: "We wash, fold, and steam iron all everyday clothing: T-shirts, shirts, trousers, jeans, dresses, hoodies, shorts, lab coats, and bedsheets. Delicate native wear and formal suits receive gentle specialized care.",
+    q: "How fast will my clothes be ready?",
+    a: "Normally within 1 to 2 days! We wash them clean with sweet-smelling soap, dry them, steam iron them smooth, and pack them neatly in protective bags so you can put them straight into your wardrobe.",
+  },
+  {
+    q: "What happens if it rains or there is lights out (dumsor)?",
+    a: "We have backup solar power, plant generators, and industrial dryers. Rain or dumsor will never delay your clean clothes!",
   },
 ];
 
@@ -142,7 +146,7 @@ export function LaundryApp() {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 40);
 
-      const sections = ["services", "pricing", "process", "areas", "location", "faq", "contact"];
+      const sections = ["services", "pricing", "location", "process", "faq", "contact"];
       const scrollPos = window.scrollY + 220;
       for (const sec of sections) {
         const el = document.getElementById(sec);
@@ -167,10 +171,9 @@ export function LaundryApp() {
   const navItems = useMemo(() => {
     return [
       { label: "Services", id: "services" },
-      { label: "Pricing", id: "pricing" },
-      { label: "How It Works", id: "process" },
-      { label: "Areas We Serve", id: "areas" },
+      { label: "Prices", id: "pricing" },
       { label: "Map & Shop", id: "location" },
+      { label: "How It Works", id: "process" },
       { label: "FAQ", id: "faq" },
       { label: "Call Us", id: "contact" },
     ];
@@ -325,7 +328,7 @@ export function LaundryApp() {
             <div className="relative">
               <img
                 src={brandIcon}
-                alt="Affordable Laundry KNUST Kumasi Logo"
+                alt="Affordable Laundry"
                 className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover border border-sky-400/40 shadow-xs group-hover:scale-105 group-hover:rotate-1 transition-all duration-300"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-background" />
@@ -359,14 +362,11 @@ export function LaundryApp() {
             {navItems.map(({ label, id }) => {
               const isActive = activeSection === id;
               return (
-                <a
+                <button
                   key={id}
-                  href={`#${id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    scrollToSection(id);
-                  }}
-                  className={`relative rounded-full text-xs font-bold px-3.5 h-8 transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 no-underline ${
+                  type="button"
+                  onClick={() => scrollToSection(id)}
+                  className={`relative rounded-full text-xs font-bold px-4 h-8 transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 ${
                     isActive
                       ? isScrolled
                         ? "bg-primary text-primary-foreground shadow-sm"
@@ -384,7 +384,7 @@ export function LaundryApp() {
                       }`}
                     />
                   )}
-                </a>
+                </button>
               );
             })}
           </nav>
@@ -441,24 +441,21 @@ export function LaundryApp() {
                 const iconMap: Record<string, typeof WashingMachine> = {
                   services: WashingMachine,
                   pricing: Shirt,
+                  location: MapPin,
                   process: Compass,
-                  areas: MapPin,
-                  location: Navigation,
                   faq: HelpCircle,
                   contact: Phone,
                 };
                 const ItemIcon = iconMap[id] || Compass;
 
                 return (
-                  <a
+                  <button
                     key={id}
-                    href={`#${id}`}
-                    onClick={(e) => {
-                      e.preventDefault();
+                    onClick={() => {
                       scrollToSection(id);
                       setMenuOpen(false);
                     }}
-                    className={`flex items-center gap-2.5 py-3 px-3.5 rounded-2xl text-xs font-extrabold transition-all duration-300 text-left border no-underline ${
+                    className={`flex items-center gap-2.5 py-3 px-3.5 rounded-2xl text-xs font-extrabold transition-all duration-300 text-left border ${
                       isActive
                         ? "bg-sky-500/30 text-white border-sky-400 shadow-md shadow-sky-500/25 scale-[1.02]"
                         : "bg-white/10 border-white/15 text-white/90 hover:bg-white/20 hover:text-white hover:border-white/30 hover:scale-[1.02] active:scale-95"
@@ -474,7 +471,7 @@ export function LaundryApp() {
                       <ItemIcon className="w-4 h-4" />
                     </div>
                     <span className="truncate text-white font-extrabold">{label}</span>
-                  </a>
+                  </button>
                 );
               })}
             </div>
@@ -538,8 +535,8 @@ export function LaundryApp() {
           <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-16 lg:py-20 space-y-4 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.08] drop-shadow-md max-w-4xl">
-              Laundry Pickup &amp; Delivery at{" "}
-              <span className="text-sky-300 italic font-serif">KNUST and Kumasi</span>
+              Clean clothes, <br />
+              <span className="text-sky-300 italic font-serif">delivered fresh</span> to your door.
             </h1>
 
             {/* Easy Simple Explanation */}
@@ -669,7 +666,7 @@ export function LaundryApp() {
               <div className="rounded-3xl overflow-hidden border border-border shadow-lg relative group">
                 <img
                   src={courierImage}
-                  alt="Affordable Laundry Friendly Delivery Courier in Kumasi"
+                  alt="Affordable Laundry Friendly Delivery Courier"
                   className="w-full h-52 sm:h-56 object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                   decoding="async"
@@ -794,76 +791,6 @@ export function LaundryApp() {
           </div>
         </section>
 
-        {/* Areas We Serve Section - Essential for Local SEO */}
-        <section id="areas" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto space-y-2.5 mb-10">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Campus &amp; Neighborhood Coverage
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-              Areas We Serve Around{" "}
-              <span className="text-primary italic font-serif">KNUST &amp; Kumasi</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Fast, friendly laundry pickup and delivery across KNUST campus, student hostels, and
-              Kumasi residential neighborhoods.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {[
-              {
-                name: "KNUST Campus Halls",
-                desc: "Unity Hall (Conti), University Hall (Katanga), Republic, Queen Elizabeth II, Independence, and Africa Hall.",
-                badge: "Free Hall Gate Pickup",
-              },
-              {
-                name: "Ayeduase & New Site",
-                desc: "All student hostels, apartments, and private residences around Ayeduase gate and Ayeduase New Site.",
-                badge: "Hostel Pickup",
-              },
-              {
-                name: "Kotei & Gaza",
-                desc: "Doorstep collection along Gaza street, Kotei township, and surrounding student hostels.",
-                badge: "Daily Coverage",
-              },
-              {
-                name: "Bomso & Tech Junction",
-                desc: "Quick collection for students, lecturers, and residents near Bomso and Kumasi Tech Junction.",
-                badge: "Fast Dispatch",
-              },
-              {
-                name: "Boadi",
-                desc: "Doorstep laundry collection for residential homes, hostels, and student apartments in Boadi.",
-                badge: "Doorstep Service",
-              },
-              {
-                name: "Oforikrom & Kumasi",
-                desc: "Serving Oforikrom, Gyinyase, Anwomaso, and greater Kumasi with reliable wash, fold, and steam ironing.",
-                badge: "Greater Kumasi",
-              },
-            ].map((area) => (
-              <div
-                key={area.name}
-                className="p-6 bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-xl hover:-translate-y-1 hover:border-sky-400/40 transition-all duration-300 space-y-2.5"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
-                    <span>{area.name}</span>
-                  </h3>
-                  <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                    {area.badge}
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  {area.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* Customer Review - Translucent Glass Card */}
         <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center">
           <div className="p-7 sm:p-10 rounded-3xl bg-white/40 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 shadow-xl space-y-3">
@@ -880,10 +807,10 @@ export function LaundryApp() {
           <div className="text-center max-w-2xl mx-auto space-y-2.5 mb-10">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 border border-sky-400/20 text-sky-600 dark:text-sky-400 text-xs font-bold uppercase tracking-wider">
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>Questions &amp; Answers</span>
+              <span>Questions & Answers</span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-              Frequently Asked Questions (FAQ)
+              Frequently Asked <span className="text-primary italic font-serif">Questions</span>
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               Simple answers to everything you need to know before handing your clothes to our
@@ -956,12 +883,7 @@ export function LaundryApp() {
       {/* Modern Footer */}
       <footer className="border-t border-border bg-card/60 backdrop-blur-xl py-10 px-4 sm:px-6 lg:px-8 text-center text-xs text-muted-foreground space-y-3">
         <div className="flex items-center justify-center gap-2 font-bold text-foreground">
-          <img
-            src={brandIcon}
-            alt="Affordable Laundry KNUST Kumasi Brand Icon"
-            loading="lazy"
-            className="w-6 h-6 rounded-lg"
-          />
+          <img src={brandIcon} alt="Icon" className="w-6 h-6 rounded-lg" />
           <span>Affordable Laundry Kumasi</span>
         </div>
         <p>© 2026 Affordable Laundry Service. Clean Clothes & Fast Pickup in KNUST, Kumasi.</p>
@@ -974,13 +896,10 @@ export function LaundryApp() {
       >
         <div className="relative bg-slate-950/95 dark:bg-black/95 backdrop-blur-2xl border border-white/20 shadow-2xl shadow-black/60 rounded-full p-1.5 px-2.5 flex items-center justify-between ring-1 ring-white/10">
           {/* 1. Services Tab */}
-          <a
-            href="#services"
-            onClick={(e) => {
-              e.preventDefault();
-              scrollToSection("services");
-            }}
-            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-200 active:scale-95 no-underline ${
+          <button
+            type="button"
+            onClick={() => scrollToSection("services")}
+            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-200 active:scale-95 ${
               activeSection === "services"
                 ? "bg-white/15 text-sky-400 font-bold"
                 : "text-white/80 hover:text-white"
@@ -991,27 +910,24 @@ export function LaundryApp() {
             {activeSection === "services" && (
               <span className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-sky-400" />
             )}
-          </a>
+          </button>
 
           {/* 2. Prices Tab */}
-          <a
-            href="#pricing"
-            onClick={(e) => {
-              e.preventDefault();
-              scrollToSection("pricing");
-            }}
-            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-200 active:scale-95 no-underline ${
+          <button
+            type="button"
+            onClick={() => scrollToSection("pricing")}
+            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-200 active:scale-95 ${
               activeSection === "pricing"
                 ? "bg-white/15 text-sky-400 font-bold"
                 : "text-white/80 hover:text-white"
             }`}
           >
             <Shirt className="w-4 h-4" />
-            <span className="text-[10px] font-bold tracking-tight mt-0.5">Pricing</span>
+            <span className="text-[10px] font-bold tracking-tight mt-0.5">Prices</span>
             {activeSection === "pricing" && (
               <span className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-sky-400" />
             )}
-          </a>
+          </button>
 
           {/* 3. CENTER HERO: Clean "Book" Button */}
           <button
@@ -1026,13 +942,10 @@ export function LaundryApp() {
           </button>
 
           {/* 4. Map Tab */}
-          <a
-            href="#location"
-            onClick={(e) => {
-              e.preventDefault();
-              scrollToSection("location");
-            }}
-            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-200 active:scale-95 no-underline ${
+          <button
+            type="button"
+            onClick={() => scrollToSection("location")}
+            className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-full transition-all duration-200 active:scale-95 ${
               activeSection === "location"
                 ? "bg-white/15 text-sky-400 font-bold"
                 : "text-white/80 hover:text-white"
@@ -1043,7 +956,7 @@ export function LaundryApp() {
             {activeSection === "location" && (
               <span className="absolute -bottom-0.5 w-1.5 h-1.5 rounded-full bg-sky-400" />
             )}
-          </a>
+          </button>
 
           {/* 5. Direct WhatsApp Tab */}
           <a
