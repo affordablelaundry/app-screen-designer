@@ -170,7 +170,7 @@ export function CustomerDashboard({
             <div className="flex items-center gap-4">
               <img
                 src={brandIcon}
-                alt="Affordable Laundry"
+                alt="Affordable Laundry KNUST customer profile icon"
                 className="w-16 h-16 rounded-full border-2 border-primary/20 object-cover shadow-sm"
               />
               <div>

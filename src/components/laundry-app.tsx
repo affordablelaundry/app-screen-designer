@@ -75,53 +75,45 @@ const laundryItems: LaundryItem[] = [
 const services = [
   {
     number: "01",
-    title: "Wash & Fold",
-    copy: "Your everyday clothes returned clean, soft, fresh, and neatly folded.",
+    title: "Washing",
+    copy: "Gentle machine and hand washing with fresh-scented detergent to leave your garments clean and spotless.",
     icon: WashingMachine,
   },
   {
     number: "02",
-    title: "Iron & Pack",
-    copy: "Clean steam ironing so your shirts, trousers, and dresses look sharp.",
+    title: "Ironing",
+    copy: "Crisp steam pressing on hangers or neatly folded so your shirts, trousers, and dresses look sharp.",
     icon: Shirt,
   },
   {
     number: "03",
-    title: "Free Doorstep Pickup",
-    copy: "We pick up and bring back to your hostel, hall, or room for free.",
+    title: "Folding & Packaging",
+    copy: "Neatly folded and hygienically packed in protective bags, ready to place straight into your wardrobe.",
     icon: Truck,
   },
 ];
 
-// Straightforward answers to everyday laundry questions around KNUST & Kumasi
+// 5 common questions for KNUST students and Kumasi residents: price, how long it takes, hostel pickup, areas covered, payment
 const faqs = [
   {
-    q: "How do I prepare my clothes before the rider arrives?",
-    a: "Just put your dirty clothes in any bag or rubber bag (poly bag). You don’t need to count them first; our rider will count them together with you at your door, or we count them at our shop and text you a confirmation right away.",
+    q: "How much does laundry cost?",
+    a: "Our prices are simple and charged per item so you always know what you will pay upfront. Everyday T-shirts are GHC 4, dress shirts are GHC 5, trousers and jeans are GHC 6, dresses are GHC 10, and bedsheets are GHC 12. We don't use confusing weight scales or wet clothes fees.",
   },
   {
-    q: "What items and clothes do you wash?",
-    a: "We wash all everyday clothes: T-shirts, shirts, trousers, jeans, dresses, hoodies, shorts, boxers, and school uniforms or lab coats. We also wash bedsheets, duvet covers, pillowcases, and towels. If you have delicate native wear or funeral fabrics, tell the rider and we take special gentle care.",
+    q: "How long does it take for my clothes to be ready?",
+    a: "Your clothes are washed clean, dried, steam ironed smooth, and returned within 24 to 48 hours (1 to 2 days). If you have urgent needs, express same-day return is available upon request.",
   },
   {
-    q: "How and when do I pay for my laundry?",
-    a: "You only pay AFTER your clothes are washed, dried, ironed, and delivered back to you. You can pay via Mobile Money (MTN MoMo, Telecel Cash) or give cash directly to the rider.",
+    q: "Do you pick up directly from KNUST hostels and halls?",
+    a: "Yes! Our dispatch rider comes directly to your hostel gate or hall reception across KNUST — including Unity Hall (Conti), Katanga, Republic, Queen's, Independence, Africa Hall, and private hostels in Ayeduase and Kotei. We call your phone 5 to 10 minutes before arrival so you just meet us at the gate.",
   },
   {
-    q: "Do you charge by weight (kilo) or per cloth?",
-    a: "We charge simple prices for each single cloth (from GHC 4 per piece). There are no heavy weighing scales, wet weight tricks, or guessing. You know exactly what you are paying before we start.",
+    q: "Which areas do you serve for pickup and delivery?",
+    a: "Areas We Serve: KNUST campus, Ayeduase, Kotei, Bomso, Boadi, Oforikrom and the rest of Kumasi. Pickup is free for students and residents on campus and nearby communities.",
   },
   {
-    q: "Will the rider come directly to my hostel or hall gate?",
-    a: "Yes! Whether you are staying in Unity Hall (Conti), Katanga, Republic, Queen's, Independence, Africa Hall, or in hostels around Ayeduase, Kotei, Bomso, or Gyinyase, our dispatch rider calls your phone directly when outside your gate.",
-  },
-  {
-    q: "How fast will my clothes be ready?",
-    a: "Normally within 1 to 2 days! We wash them clean with sweet-smelling soap, dry them, steam iron them smooth, and pack them neatly in protective bags so you can put them straight into your wardrobe.",
-  },
-  {
-    q: "What happens if it rains or there is lights out (dumsor)?",
-    a: "We have backup solar power, plant generators, and industrial dryers. Rain or dumsor will never delay your clean clothes!",
+    q: "How and when do I make payment?",
+    a: "You only pay AFTER your clothes have been cleaned, ironed, and delivered back to you in pristine condition. We accept Mobile Money (MTN MoMo, Telecel Cash) and cash directly to the rider upon delivery.",
   },
 ];
 
@@ -170,12 +162,12 @@ export function LaundryApp() {
 
   const navItems = useMemo(() => {
     return [
-      { label: "Services", id: "services" },
+      { label: "Our Services", id: "services" },
       { label: "Prices", id: "pricing" },
-      { label: "Map & Shop", id: "location" },
       { label: "How It Works", id: "process" },
+      { label: "Areas We Serve", id: "location" },
       { label: "FAQ", id: "faq" },
-      { label: "Call Us", id: "contact" },
+      { label: "Contact", id: "contact" },
     ];
   }, []);
 
@@ -328,7 +320,7 @@ export function LaundryApp() {
             <div className="relative">
               <img
                 src={brandIcon}
-                alt="Affordable Laundry"
+                alt="Affordable Laundry KNUST logo icon"
                 className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl object-cover border border-sky-400/40 shadow-xs group-hover:scale-105 group-hover:rotate-1 transition-all duration-300"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-background" />
@@ -521,7 +513,7 @@ export function LaundryApp() {
           {/* High-Resolution Ghanaian Laundry Specialists Atelier Photo - Optimized for portrait mobile screens */}
           <img
             src={heroAtelierImage}
-            alt="Affordable Laundry Friendly Ghanaian Team in Kumasi Atelier"
+            alt="Professional garment washing, ironing and folding team in Kumasi near KNUST"
             className="absolute inset-0 w-full h-full object-cover object-[center_18%] sm:object-center transition-transform duration-1000 group-hover:scale-105"
             loading="eager"
             decoding="async"
@@ -535,15 +527,15 @@ export function LaundryApp() {
           <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-16 lg:py-20 space-y-4 sm:space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.08] drop-shadow-md max-w-4xl">
-              Clean clothes, <br />
-              <span className="text-sky-300 italic font-serif">delivered fresh</span> to your door.
+              Laundry Pickup &amp; Delivery <br />
+              <span className="text-sky-300 italic font-serif">at KNUST and Kumasi</span>
             </h1>
 
             {/* Easy Simple Explanation */}
             <p className="text-xs sm:text-base lg:text-lg text-white/90 leading-relaxed font-normal max-w-2xl drop-shadow-xs">
-              Simple prices for each cloth — no weighing scales, no guessing. Free pickup and
-              doorstep delivery to all KNUST halls, hostels, and Kumasi homes with live phone
-              updates.
+              Affordable laundry pickup and delivery for KNUST students and Kumasi residents. Simple
+              per-item prices, fast return, and free collection to your hostel gate, hall of
+              residence, or home.
             </p>
 
             {/* CTA Buttons */}
@@ -606,14 +598,16 @@ export function LaundryApp() {
         <section id="services" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto space-y-2.5 mb-10">
             <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Care From Door to Wardrobe
+              Complete Garment Care
             </span>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-              We Take Good Care of{" "}
-              <span className="text-primary italic font-serif">Every Single Cloth</span>
+              Our Services:{" "}
+              <span className="text-primary italic font-serif">Washing, Ironing &amp; Folding</span>
             </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Gentle washing, clean soap, smooth steam ironing, and fast delivery to your door.
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              We provide full garment care for KNUST students and Kumasi residents. Our services
+              include thorough washing with fresh-scented detergent, crisp steam ironing, and clean
+              protective folding delivered straight to your door.
             </p>
           </div>
 
@@ -654,19 +648,20 @@ export function LaundryApp() {
                 Clear Prices for Every Cloth
               </span>
               <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-                Know the price <span className="text-primary italic font-serif">before</span> we
-                come to pick up.
+                Prices: Transparent Rates{" "}
+                <span className="text-primary italic font-serif">Per Garment</span>
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                No weighing scales. No guessing. Pick your items below and watch your total show
-                right away.
+                Enjoy transparent per-item pricing across KNUST and Kumasi. No weighing scales, no
+                wet weight surprises, and no guessing. Select your clothes below to see your exact
+                total before booking your pickup.
               </p>
 
               {/* Courier Showcase Photo */}
               <div className="rounded-3xl overflow-hidden border border-border shadow-lg relative group">
                 <img
                   src={courierImage}
-                  alt="Affordable Laundry Friendly Delivery Courier"
+                  alt="Clean folded laundry delivered to a KNUST hostel"
                   className="w-full h-52 sm:h-56 object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                   decoding="async"
@@ -752,11 +747,14 @@ export function LaundryApp() {
         <section id="process" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto space-y-2.5 mb-10">
             <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Super Simple Steps
+              Simple 3-Step Routine
             </span>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-              From Your Door, <span className="text-primary italic font-serif">Back to You</span>
+              How It <span className="text-primary italic font-serif">Works</span>
             </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Fast, friendly laundry pickup and delivery for KNUST students and Kumasi residents.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
@@ -764,17 +762,17 @@ export function LaundryApp() {
               {
                 step: "01",
                 title: "Pick Your Clothes",
-                desc: "Choose the items you have with our clear per-cloth prices.",
+                desc: "Choose the items you have with our clear per-cloth prices and book online or via WhatsApp in 30 seconds.",
               },
               {
                 step: "02",
                 title: "We Pick Up at Your Door",
-                desc: "Our rider comes to your hostel, hall, or house at your chosen time.",
+                desc: "Our rider comes directly to your KNUST hall, hostel gate, or house in Kumasi at your chosen time.",
               },
               {
                 step: "03",
                 title: "Returned Clean & Fresh",
-                desc: "Your clothes arrive back clean, ironed, and ready to wear.",
+                desc: "Your clothes arrive back clean, steam ironed, and neatly packed within 24 to 48 hours, ready to wear.",
               },
             ].map((p) => (
               <div
@@ -813,8 +811,7 @@ export function LaundryApp() {
               Frequently Asked <span className="text-primary italic font-serif">Questions</span>
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Simple answers to everything you need to know before handing your clothes to our
-              rider.
+              Simple answers to everyday laundry questions for KNUST students and Kumasi residents.
             </p>
           </div>
 
@@ -848,7 +845,7 @@ export function LaundryApp() {
           <div className="p-7 sm:p-12 rounded-3xl bg-white/45 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 shadow-2xl text-center space-y-6">
             <div className="space-y-2 max-w-xl mx-auto">
               <span className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
-                Doorstep Laundry in Kumasi
+                Doorstep Laundry in KNUST &amp; Kumasi
               </span>
               <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground">
                 Let Us Wash Your Clothes{" "}
@@ -876,6 +873,34 @@ export function LaundryApp() {
                 <span>Call Rider: 053 233 1150</span>
               </a>
             </div>
+
+            {/* Normal text for Phone Number, Location and Opening Hours */}
+            <div className="pt-6 border-t border-border/40 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-muted-foreground text-left sm:text-center">
+              <div className="p-3 rounded-2xl bg-white/20 dark:bg-white/5 border border-white/20">
+                <span className="font-bold text-foreground block mb-1">Phone Number</span>
+                <a
+                  href="tel:0532331150"
+                  className="text-sky-600 dark:text-sky-400 font-extrabold hover:underline text-sm"
+                >
+                  053 233 1150
+                </a>
+                <span className="block text-[11px] mt-0.5">Calls &amp; WhatsApp messages</span>
+              </div>
+              <div className="p-3 rounded-2xl bg-white/20 dark:bg-white/5 border border-white/20">
+                <span className="font-bold text-foreground block mb-1">Location</span>
+                <span className="font-semibold text-foreground text-xs block">
+                  Ayeduase, Near KNUST Ayeduase Gate
+                </span>
+                <span className="block text-[11px] mt-0.5">Kumasi, Ashanti Region, Ghana</span>
+              </div>
+              <div className="p-3 rounded-2xl bg-white/20 dark:bg-white/5 border border-white/20">
+                <span className="font-bold text-foreground block mb-1">Opening Hours</span>
+                <span className="font-semibold text-foreground text-xs block">
+                  Monday – Saturday: 7:00 AM – 8:00 PM
+                </span>
+                <span className="block text-[11px] mt-0.5">Sunday: 10:00 AM – 6:00 PM</span>
+              </div>
+            </div>
           </div>
         </section>
       </main>
@@ -883,10 +908,20 @@ export function LaundryApp() {
       {/* Modern Footer */}
       <footer className="border-t border-border bg-card/60 backdrop-blur-xl py-10 px-4 sm:px-6 lg:px-8 text-center text-xs text-muted-foreground space-y-3">
         <div className="flex items-center justify-center gap-2 font-bold text-foreground">
-          <img src={brandIcon} alt="Icon" className="w-6 h-6 rounded-lg" />
-          <span>Affordable Laundry Kumasi</span>
+          <img
+            src={brandIcon}
+            alt="Affordable Laundry service logo in Kumasi"
+            className="w-6 h-6 rounded-lg"
+          />
+          <span>Affordable Laundry KNUST &amp; Kumasi</span>
         </div>
-        <p>© 2026 Affordable Laundry Service. Clean Clothes & Fast Pickup in KNUST, Kumasi.</p>
+        <p className="max-w-xl mx-auto">
+          Doorstep laundry pickup and delivery across KNUST campus, Ayeduase, Kotei, Bomso, Boadi,
+          Oforikrom and Kumasi. Phone: <strong>053 233 1150</strong>. Location:{" "}
+          <strong>Ayeduase near KNUST Ayeduase Gate, Kumasi</strong>. Opening Hours:{" "}
+          <strong>Mon – Sat 7:00 AM – 8:00 PM, Sun 10:00 AM – 6:00 PM</strong>.
+        </p>
+        <p>© 2026 Affordable Laundry KNUST &amp; Kumasi. All rights reserved.</p>
       </footer>
 
       {/* Floating Mobile Bottom Navigation Dock - Clean, High-Contrast & Legible */}
@@ -985,7 +1020,7 @@ export function LaundryApp() {
               <div className="flex items-center gap-3">
                 <img
                   src={brandIcon}
-                  alt="Affordable Laundry"
+                  alt="Affordable Laundry KNUST order booking logo"
                   className="w-10 h-10 rounded-2xl object-cover border border-primary/20"
                 />
                 <div>

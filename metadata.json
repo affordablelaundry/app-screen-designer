@@ -1,5 +1,5 @@
 {
   "name": "Affordable Laundry",
-  "description": "Book premium laundry pickup and delivery around KNUST, Kumasi, with simple per-item garment pricing.",
+  "description": "Affordable laundry pickup and delivery for KNUST students and Kumasi residents. Simple per-item prices, free campus pickup, fresh clothes returned fast.",
   "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

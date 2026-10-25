@@ -85,32 +85,82 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover",
       },
-      { title: "Affordable Laundry Service · KNUST Kumasi" },
+      { title: "Affordable Laundry KNUST & Kumasi | Pickup & Delivery" },
       {
         name: "description",
         content:
-          "Clean clothes, delivered fresh to your door. Free collection and return across KNUST halls, hostels and Kumasi.",
+          "Affordable laundry pickup and delivery for KNUST students and Kumasi residents, simple per-item prices, fast return.",
       },
-      { name: "author", content: "Affordable Laundry Service" },
+      { name: "author", content: "Affordable Laundry" },
       { name: "theme-color", content: "#0284c7" },
+      { property: "og:site_name", content: "Affordable Laundry" },
       { property: "og:type", content: "website" },
-      { property: "og:title", content: "Affordable Laundry Service · KNUST Kumasi" },
+      { property: "og:title", content: "Affordable Laundry KNUST & Kumasi | Pickup & Delivery" },
       {
         property: "og:description",
         content:
-          "Clean clothes, delivered fresh to your door. Simple item pricing, free campus pickup and fast delivery.",
+          "Affordable laundry pickup and delivery for KNUST students and Kumasi residents, simple per-item prices, fast return.",
       },
       { property: "og:image", content: "/og-image.jpg" },
+      { property: "og:image:secure_url", content: "/og-image.jpg" },
+      { property: "og:image:type", content: "image/jpeg" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Clean folded laundry delivered to a KNUST hostel" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Affordable Laundry Service · KNUST Kumasi" },
+      { name: "twitter:title", content: "Affordable Laundry KNUST & Kumasi | Pickup & Delivery" },
       {
         name: "twitter:description",
         content:
-          "Clean clothes, delivered fresh to your door. Simple item pricing with free campus pickup.",
+          "Affordable laundry pickup and delivery for KNUST students and Kumasi residents, simple per-item prices, fast return.",
       },
       { name: "twitter:image", content: "/og-image.jpg" },
+      { name: "twitter:image:alt", content: "Clean folded laundry delivered to a KNUST hostel" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "DryCleaningOrLaundry",
+          name: "Affordable Laundry KNUST & Kumasi",
+          image: "/og-image.jpg",
+          description:
+            "Affordable laundry pickup and delivery for KNUST students and Kumasi residents, simple per-item prices, fast return.",
+          telephone: "+233532331150",
+          priceRange: "GHC 4 - GHC 25",
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: "Ayeduase, near KNUST Ayeduase Gate",
+            addressLocality: "Kumasi",
+            addressRegion: "Ashanti Region",
+            addressCountry: "GH",
+          },
+          openingHoursSpecification: [
+            {
+              "@type": "OpeningHoursSpecification",
+              dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+              opens: "07:00",
+              closes: "20:00",
+            },
+            {
+              "@type": "OpeningHoursSpecification",
+              dayOfWeek: "Sunday",
+              opens: "10:00",
+              closes: "18:00",
+            },
+          ],
+          areaServed: [
+            "KNUST campus",
+            "Ayeduase",
+            "Kotei",
+            "Bomso",
+            "Boadi",
+            "Oforikrom",
+            "Kumasi",
+          ],
+        }),
+      },
     ],
     links: [
       {

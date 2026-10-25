@@ -532,7 +532,7 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
             <div className="relative shrink-0">
               <img
                 src={brandIcon}
-                alt="Affordable Laundry"
+                alt="Affordable Laundry KNUST portal logo"
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl object-cover border border-sky-400/40 shadow-xs"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-sky-500 border-2 border-background" />
@@ -1172,7 +1172,11 @@ export function CustomerPortal({ onBackToLanding }: CustomerPortalProps) {
           <div className="relative w-full max-w-md bg-white/95 dark:bg-black/90 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <img src={brandIcon} alt="Logo" className="w-7 h-7 rounded-lg" />
+                <img
+                  src={brandIcon}
+                  alt="Affordable Laundry receipt logo"
+                  className="w-7 h-7 rounded-lg"
+                />
                 <h3 className="font-bold text-foreground">Digital Service Receipt</h3>
               </div>
               <button

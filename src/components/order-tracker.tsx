@@ -399,7 +399,7 @@ export function OrderTracker({ onOpenBooking, selectedOrderId }: OrderTrackerPro
                 <div className="flex items-center gap-3">
                   <img
                     src={brandIcon}
-                    alt="Affordable Laundry"
+                    alt="Affordable Laundry KNUST order tracking icon"
                     className="w-12 h-12 rounded-full border border-primary/20 shadow-sm"
                   />
                   <div>

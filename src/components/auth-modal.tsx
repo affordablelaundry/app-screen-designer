@@ -87,7 +87,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signin", onSuccess }
         <div className="flex flex-col items-center text-center mb-5">
           <img
             src={brandIcon}
-            alt="Affordable Laundry"
+            alt="Affordable Laundry KNUST account authentication logo"
             className="w-14 h-14 rounded-2xl border border-primary/20 shadow-md mb-2 object-cover"
           />
           <h2 className="text-xl sm:text-2xl font-black text-foreground">

@@ -568,7 +568,7 @@ export function AdminDashboard({ onBackToLanding }: AdminDashboardProps) {
             <div className="relative shrink-0">
               <img
                 src={brandIcon}
-                alt="Affordable Laundry"
+                alt="Affordable Laundry KNUST management portal logo"
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl object-cover border border-sky-400/40 shadow-xs"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-sky-500 border-2 border-background" />

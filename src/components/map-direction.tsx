@@ -15,41 +15,41 @@ import { Button } from "@/components/ui/button";
 
 const ATELIER_LOCATION = {
   name: "Affordable Laundry (Main Branch)",
-  address: "Ayeduase - KNUST, Kumasi, Ghana",
+  address: "Ayeduase, Near KNUST Ayeduase Gate, Kumasi, Ghana",
   city: "Kumasi, Ashanti Region",
   mapsUrl: "https://maps.app.goo.gl/V6eX9v3zBjmZy7EV7",
   lat: 6.6752325,
   lng: -1.5620578,
   phone: "053 233 1150",
   whatsapp: "233532331150",
-  hours: "Mon – Sat: 7:00 AM – 8:00 PM · Sun: 10:00 AM – 6:00 PM",
+  hours: "Monday – Saturday: 7:00 AM – 8:00 PM · Sunday: 10:00 AM – 6:00 PM",
 };
 
 const CAMPUS_ZONES = [
   {
-    name: "Zone 1 · KNUST Main Campus & Halls",
-    details: "Unity, University Hall (Katanga), Republic, Queen's, Independence, Africa Hall",
+    name: "Zone 1 · KNUST Campus & Halls",
+    details: "Unity Hall (Conti), Katanga, Republic, Queen's, Independence, Africa Hall & Brunei",
     eta: "10 – 15 mins",
     fee: "Free Pickup & Return",
     color: "emerald",
   },
   {
-    name: "Zone 2 · Ayeduase & Kotei",
-    details: "Ayeduase New Site, Kotei, Boadi Gate, Jubilee Mall perimeter",
+    name: "Zone 2 · Ayeduase, Kotei & Boadi",
+    details: "Ayeduase New Site, Kotei hostels, Boadi, Jubilee Mall perimeter & campus gates",
     eta: "15 – 20 mins",
     fee: "Free Pickup & Return",
     color: "emerald",
   },
   {
-    name: "Zone 3 · Gyinyase & Bomso",
-    details: "Gyinyase, Bomso Clinic, Tech Junction, Kentinkrono",
+    name: "Zone 3 · Bomso & Oforikrom",
+    details: "Bomso Clinic, Oforikrom, Tech Junction, Kentinkrono & surrounding areas",
     eta: "20 – 30 mins",
-    fee: "GHC 10 Flat Rider Dispatch",
+    fee: "Free Campus Pickup / GHC 10 Outer Dispatch",
     color: "sky",
   },
   {
-    name: "Zone 4 · Greater Kumasi",
-    details: "Ahodwo, Asokwa, Ridge, Danyame, Kumasi City Mall",
+    name: "Zone 4 · Rest of Kumasi",
+    details: "Ahodwo, Asokwa, Ridge, Danyame, Kumasi City Mall, Bantama and the rest of Kumasi",
     eta: "Scheduled Express",
     fee: "Calculated at booking",
     color: "blue",
@@ -68,6 +68,7 @@ export function MapDirection() {
       id="location"
       className="relative py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full"
     >
+      <div id="areas" className="scroll-mt-24" />
       {/* Background ambient glow orbs */}
       <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-96 rounded-full bg-primary/10 blur-3xl pointer-events-none -z-10" />
       <div className="absolute bottom-10 right-1/4 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none -z-10" />
@@ -76,14 +77,16 @@ export function MapDirection() {
       <div className="text-center max-w-2xl mx-auto space-y-2.5 mb-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
           <Compass className="w-3.5 h-3.5" />
-          <span>Our Shop & Free Pickup Areas</span>
+          <span>Doorstep Coverage &amp; Pickup Areas</span>
         </div>
         <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-          Visit Us or <span className="text-primary italic font-serif">We Come to You</span>
+          Areas We <span className="text-primary italic font-serif">Serve</span>
         </h2>
         <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-          Near the KNUST Ayeduase Gate. Our friendly riders come right to your hostel, hall, or
-          house.
+          Areas We Serve: <strong>KNUST campus</strong>, <strong>Ayeduase</strong>,{" "}
+          <strong>Kotei</strong>, <strong>Bomso</strong>, <strong>Boadi</strong>,{" "}
+          <strong>Oforikrom</strong> and the <strong>rest of Kumasi</strong>. Our riders collect
+          directly from your hostel gate, hall reception, or home doorstep.
         </p>
       </div>
 
