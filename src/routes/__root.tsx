@@ -125,7 +125,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           description:
             "Affordable laundry pickup and delivery for KNUST students and Kumasi residents, simple per-item prices, fast return.",
           telephone: "+233532331150",
-          priceRange: "GHC 4 - GHC 25",
+          priceRange: "GH₵1 - GH₵30+",
           address: {
             "@type": "PostalAddress",
             streetAddress: "Ayeduase, near KNUST Ayeduase Gate",

@@ -167,7 +167,7 @@ export function MapDirection() {
               </div>
               <div>
                 <h3 className="font-bold text-lg text-foreground tracking-tight">
-                  Atelier & Dispatch Hub
+                  Main Laundry & Pickup Hub
                 </h3>
                 <p className="text-xs text-muted-foreground">{ATELIER_LOCATION.city}</p>
               </div>

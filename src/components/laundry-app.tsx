@@ -47,6 +47,7 @@ type LaundryItem = {
   name: string;
   note: string;
   price: number;
+  displayPrice: string;
 };
 
 type Booking = {
@@ -60,16 +61,83 @@ type Booking = {
   status: string;
 };
 
-// Easy, straightforward item pricing without technical jargon
+// Official item pricing list
 const laundryItems: LaundryItem[] = [
-  { id: "tshirt", name: "T-shirt", note: "Washed, ironed & folded", price: 4 },
-  { id: "shirt", name: "Dress shirt", note: "Ironed smooth on a hanger", price: 5 },
-  { id: "trousers", name: "Trousers & Jeans", note: "Cleaned and neatly ironed", price: 6 },
-  { id: "dress", name: "Dress", note: "Gentle fabric care", price: 10 },
-  { id: "hoodie", name: "Hoodie & Sweater", note: "Deep washed and fresh", price: 10 },
-  { id: "bedsheet", name: "Bedsheet & Cover", note: "Freshly washed and folded", price: 12 },
-  { id: "jacket", name: "Jacket & Coat", note: "Careful outer wear cleaning", price: 15 },
-  { id: "suit", name: "Two-piece Suit", note: "Special gentle pressing", price: 25 },
+  {
+    id: "handkerchief",
+    name: "Handkerchief",
+    note: "Cleaned, pressed & folded",
+    price: 1,
+    displayPrice: "GH₵1",
+  },
+  {
+    id: "underwear",
+    name: "Underwear",
+    note: "Clean and sanitized",
+    price: 2,
+    displayPrice: "GH₵2",
+  },
+  { id: "socks", name: "Socks", note: "Paired & freshly washed", price: 2, displayPrice: "GH₵2" },
+  {
+    id: "shirt",
+    name: "Shirt",
+    note: "Ironed smooth on hanger",
+    price: 2.5,
+    displayPrice: "GH₵2.50",
+  },
+  {
+    id: "shorts",
+    name: "Shorts",
+    note: "Washed, ironed & folded",
+    price: 2.5,
+    displayPrice: "GH₵2.50",
+  },
+  {
+    id: "pillow-case",
+    name: "Pillow Case",
+    note: "Freshly cleaned & pressed",
+    price: 2.5,
+    displayPrice: "GH₵2.50",
+  },
+  {
+    id: "trousers",
+    name: "Trousers",
+    note: "Cleaned and neatly ironed",
+    price: 3.5,
+    displayPrice: "GH₵3.50",
+  },
+  {
+    id: "straight-dress",
+    name: "Straight Dress",
+    note: "Gentle fabric care",
+    price: 3.5,
+    displayPrice: "GH₵3.50",
+  },
+  {
+    id: "hoodie-joggers",
+    name: "Hoodie/Joggers",
+    note: "Deep washed & soft",
+    price: 4,
+    displayPrice: "GH₵4",
+  },
+  { id: "jeans", name: "Jeans", note: "GH₵4 and above", price: 4, displayPrice: "GH₵4+" },
+  { id: "towel", name: "Towel", note: "Deep washed & sanitized", price: 10, displayPrice: "GH₵10" },
+  {
+    id: "bed-sheet",
+    name: "Bed Sheet",
+    note: "Freshly washed & folded",
+    price: 10,
+    displayPrice: "GH₵10",
+  },
+  {
+    id: "sneaker",
+    name: "Sneaker",
+    note: "Detailed footwear wash",
+    price: 15,
+    displayPrice: "GH₵15",
+  },
+  { id: "blanket", name: "Blanket", note: "GH₵15 and above", price: 15, displayPrice: "GH₵15+" },
+  { id: "duvet", name: "Duvet", note: "Price not specified", price: 0, displayPrice: "Quote" },
 ];
 
 const services = [
@@ -97,7 +165,7 @@ const services = [
 const faqs = [
   {
     q: "How much does laundry cost?",
-    a: "Our prices are simple and charged per item so you always know what you will pay upfront. Everyday T-shirts are GHC 4, dress shirts are GHC 5, trousers and jeans are GHC 6, dresses are GHC 10, and bedsheets are GHC 12. We don't use confusing weight scales or wet clothes fees.",
+    a: "Our prices are simple and charged per item so you always know what you will pay upfront. Handkerchiefs are GH₵1, underwear and socks are GH₵2, shirts, shorts and pillow cases are GH₵2.50, trousers and straight dresses are GH₵3.50, hoodies/joggers are GH₵4, jeans are from GH₵4, towels and bed sheets are GH₵10, sneakers are GH₵15, and blankets are from GH₵15. Minimum order price is GH₵30 with free pickup.",
   },
   {
     q: "How long does it take for my clothes to be ready?",
@@ -229,14 +297,24 @@ export function LaundryApp() {
       return;
     }
 
+    if (total > 0 && total < 30) {
+      toast.error("Minimum order price is GH₵30. Please add more items to meet the minimum.");
+      return;
+    }
+
     // Selected garments summary for WhatsApp
     const selectedLines = laundryItems
       .filter((item) => (quantities[item.id] ?? 0) > 0)
-      .map(
-        (item) =>
-          `• ${quantities[item.id]}x ${item.name} (GHC ${item.price * (quantities[item.id] ?? 0)})`,
-      );
+      .map((item) => {
+        const qty = quantities[item.id] ?? 0;
+        const linePrice =
+          item.price > 0
+            ? `GH₵${(item.price * qty) % 1 === 0 ? item.price * qty : (item.price * qty).toFixed(2)}`
+            : "Price not specified";
+        return `• ${item.name}: ${qty} ${qty === 1 ? "piece" : "pieces"} (${linePrice})`;
+      });
 
+    const formattedTotal = total % 1 === 0 ? total : total.toFixed(2);
     const whatsappMessage =
       `🧺 *New Laundry Pickup Request - Affordable Laundry*\n\n` +
       `*Order ID:* #${newBookingId}\n` +
@@ -244,9 +322,10 @@ export function LaundryApp() {
       `*Phone:* ${phone}\n` +
       `*Pickup Location:* ${location}\n` +
       `*Pickup Date:* ${date}\n\n` +
-      `*Garments Selected:*\n${selectedLines.join("\n")}\n\n` +
+      `*Clothes Picked & Number of Each:*\n` +
+      `${selectedLines.length > 0 ? selectedLines.join("\n") : "• No individual items specified"}\n\n` +
       `*Total Pieces:* ${itemCount} ${itemCount === 1 ? "piece" : "pieces"}\n` +
-      `*Estimated Total:* GHC ${total}\n\n` +
+      `*Estimated Total:* GH₵${formattedTotal} (Min. Order: GH₵30)\n\n` +
       `Hello Affordable Laundry, please confirm my pickup schedule. Thank you!`;
 
     const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -581,14 +660,16 @@ export function LaundryApp() {
             <span>✦ STEAM IRONED</span>
             <span>✦ PACKED NEATLY</span>
             <span>✦ FREE DOORSTEP PICKUP IN KNUST</span>
-            <span>✦ GHC 4 PER T-SHIRT</span>
+            <span>✦ FROM GH₵1 PER PIECE</span>
+            <span>✦ MIN. ORDER GH₵30</span>
             <span>✦ PAY WITH MOMO</span>
             <span>✦ 1 TO 2 DAYS READY</span>
             <span>✦ WASHED CLEAN</span>
             <span>✦ STEAM IRONED</span>
             <span>✦ PACKED NEATLY</span>
             <span>✦ FREE DOORSTEP PICKUP IN KNUST</span>
-            <span>✦ GHC 4 PER T-SHIRT</span>
+            <span>✦ FROM GH₵1 PER PIECE</span>
+            <span>✦ MIN. ORDER GH₵30</span>
             <span>✦ PAY WITH MOMO</span>
             <span>✦ 1 TO 2 DAYS READY</span>
           </div>
@@ -677,6 +758,20 @@ export function LaundryApp() {
 
             {/* Interactive Garment List & Total Card - Translucent Glass */}
             <div className="lg:col-span-7 bg-white/45 dark:bg-white/5 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl space-y-6">
+              {/* Minimum Order Price Notice Banner */}
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-sky-500/10 border border-sky-400/20 text-foreground text-xs font-semibold">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-sky-500" />
+                  <span>
+                    Minimum Order Price:{" "}
+                    <strong className="text-sky-600 dark:text-sky-400">GH₵30</strong>
+                  </span>
+                </span>
+                <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                  Free doorstep pickup
+                </span>
+              </div>
+
               <div className="space-y-2.5">
                 {laundryItems.map((item) => (
                   <div
@@ -691,8 +786,8 @@ export function LaundryApp() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className="text-xs sm:text-sm font-black text-sky-600 dark:text-sky-400 min-w-[50px] text-right">
-                        GHC {item.price}
+                      <span className="text-xs sm:text-sm font-black text-sky-600 dark:text-sky-400 min-w-[65px] text-right">
+                        {item.displayPrice}
                       </span>
                       <div className="flex items-center gap-1 bg-background/80 backdrop-blur-md border border-border rounded-xl p-1 shadow-2xs">
                         <button
@@ -721,11 +816,16 @@ export function LaundryApp() {
               {/* Total Summary Footer - Translucent Glass */}
               <div className="p-4 sm:p-5 rounded-2xl bg-sky-500/15 backdrop-blur-xl border border-sky-400/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-sm">
                 <div>
-                  <span className="text-xs text-muted-foreground block font-medium">
-                    Total for {itemCount} {itemCount === 1 ? "cloth" : "clothes"}:
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground block font-medium">
+                      Total for {itemCount} {itemCount === 1 ? "cloth" : "clothes"}:
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-700 dark:text-sky-300">
+                      Min: GH₵30
+                    </span>
+                  </div>
                   <span className="text-2xl sm:text-3xl font-black text-foreground">
-                    GHC {total}
+                    GH₵ {total % 1 === 0 ? total : total.toFixed(2)}
                   </span>
                 </div>
                 <Button
@@ -1061,9 +1161,40 @@ export function LaundryApp() {
                 <div className="p-4 rounded-2xl bg-muted/40 border border-border text-xs flex justify-between font-bold">
                   <span>Estimated Total:</span>
                   <span className="text-emerald-600 dark:text-emerald-400 text-base">
-                    GHC {latestBooking.total}
+                    GH₵{" "}
+                    {latestBooking.total % 1 === 0
+                      ? latestBooking.total
+                      : latestBooking.total.toFixed(2)}
                   </span>
                 </div>
+
+                {/* Breakdown of clothes picked and quantity */}
+                {latestBooking.items && (
+                  <div className="p-3.5 rounded-2xl bg-muted/30 border border-border text-xs space-y-2">
+                    <span className="font-bold text-foreground block">
+                      Clothes Picked &amp; Quantities:
+                    </span>
+                    <div className="space-y-1 text-muted-foreground text-[11px] max-h-36 overflow-y-auto pr-1">
+                      {laundryItems
+                        .filter((item) => (latestBooking.items[item.id] ?? 0) > 0)
+                        .map((item) => {
+                          const qty = latestBooking.items[item.id] ?? 0;
+                          return (
+                            <div key={item.id} className="flex justify-between items-center py-0.5">
+                              <span>
+                                {item.name} × <strong>{qty}</strong>
+                              </span>
+                              <span className="font-medium text-foreground">
+                                {item.price > 0
+                                  ? `GH₵${(item.price * qty) % 1 === 0 ? item.price * qty : (item.price * qty).toFixed(2)}`
+                                  : "Quote"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-2.5 pt-2">
                   <a
@@ -1074,7 +1205,20 @@ export function LaundryApp() {
                         `*Phone:* ${latestBooking.phone}\n` +
                         `*Pickup Location:* ${latestBooking.location}\n` +
                         `*Pickup Date:* ${latestBooking.date}\n\n` +
-                        `*Estimated Total:* GHC ${latestBooking.total}\n\n` +
+                        `*Clothes Picked & Number of Each:*\n${
+                          laundryItems
+                            .filter((item) => (latestBooking.items?.[item.id] ?? 0) > 0)
+                            .map((item) => {
+                              const qty = latestBooking.items?.[item.id] ?? 0;
+                              const linePrice =
+                                item.price > 0
+                                  ? `GH₵${(item.price * qty) % 1 === 0 ? item.price * qty : (item.price * qty).toFixed(2)}`
+                                  : "Price not specified";
+                              return `• ${item.name}: ${qty} ${qty === 1 ? "piece" : "pieces"} (${linePrice})`;
+                            })
+                            .join("\n") || "• None specified"
+                        }\n\n` +
+                        `*Estimated Total:* GH₵${latestBooking.total % 1 === 0 ? latestBooking.total : latestBooking.total.toFixed(2)}\n\n` +
                         `Hello Affordable Laundry, please confirm my pickup schedule. Thank you!`,
                     )}`}
                     target="_blank"
@@ -1104,7 +1248,9 @@ export function LaundryApp() {
                     <span>
                       Selected Clothes ({itemCount} {itemCount === 1 ? "piece" : "pieces"})
                     </span>
-                    <span className="text-primary text-sm">Total: GHC {total}</span>
+                    <span className="text-primary text-sm font-bold">
+                      Total: GH₵ {total % 1 === 0 ? total : total.toFixed(2)}
+                    </span>
                   </div>
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                     {laundryItems.map((item) => (
@@ -1115,7 +1261,7 @@ export function LaundryApp() {
                         <div>
                           <span className="font-bold text-foreground block">{item.name}</span>
                           <span className="text-[11px] text-muted-foreground">
-                            GHC {item.price} each
+                            {item.displayPrice}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -1204,7 +1350,10 @@ export function LaundryApp() {
                   className="w-full h-12 rounded-2xl text-xs font-black shadow-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:scale-[1.02] active:scale-98 flex items-center justify-center gap-2"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  <span>Send Pickup Request via WhatsApp · GHC {total}</span>
+                  <span>
+                    Send Pickup Request via WhatsApp · GH₵{" "}
+                    {total % 1 === 0 ? total : total.toFixed(2)}
+                  </span>
                 </Button>
               </form>
             )}
